@@ -2,9 +2,13 @@
  * Transcript chunking utilities for reliable LLM processing
  */
 
-// Target chunk size in words (roughly 3000-4000 tokens)
-// This leaves room for system prompt, context, and response
-const TARGET_CHUNK_WORDS = 2500;
+import type { MappedSection } from './analyzer';
+
+// Target chunk size in words — Gemini 3 Flash output limit is 64K tokens (~48,000 words).
+// Only chunk when output would approach this limit. For rescripting (1:1 input:output),
+// transcripts up to ~40,000 words can be processed in a single request.
+const TARGET_CHUNK_WORDS = 40000;
+export { TARGET_CHUNK_WORDS };
 
 // Overlap size - how many words from the end of the repurposed chunk
 // to pass as context to the next chunk
@@ -139,4 +143,35 @@ export function extractOriginalHook(transcript: string): string {
   }
 
   return hook;
+}
+
+/**
+ * Group analyzed sections into chunks that stay under targetWords.
+ * Keeps sections whole — never splits a section across chunks.
+ * If a single section exceeds the target, it becomes its own chunk.
+ */
+export function chunkBySection(
+  sections: MappedSection[],
+  targetWords: number = TARGET_CHUNK_WORDS
+): MappedSection[][] {
+  const chunks: MappedSection[][] = [];
+  let currentChunk: MappedSection[] = [];
+  let currentWordCount = 0;
+
+  for (const section of sections) {
+    if (currentWordCount + section.wordCount > targetWords && currentChunk.length > 0) {
+      chunks.push(currentChunk);
+      currentChunk = [];
+      currentWordCount = 0;
+    }
+
+    currentChunk.push(section);
+    currentWordCount += section.wordCount;
+  }
+
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk);
+  }
+
+  return chunks;
 }

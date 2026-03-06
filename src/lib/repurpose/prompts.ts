@@ -1,81 +1,404 @@
 /**
- * System prompts for transcript repurposing
+ * Prompt factory functions for style-aware transcript repurposing.
+ *
+ * Follows Gemini best practices:
+ * - System prompt = role + style profile JSON + few-shot examples
+ * - User prompt = structural template + transcript (XML delimited) + task (LAST)
+ * - XML delimiters separate input from instructions
+ * - No redundant instructions between system and user prompts
  */
 
-export const REPURPOSE_SYSTEM_PROMPT = `You are a professional scriptwriter who specializes in rewriting video scripts. Your task is to repurpose transcripts while maintaining their winning formula.
+import { getStyleProfile } from './style-profiles';
+import type { ScriptType } from '@/types';
+import type { AnalyzedSection, MappedSection } from './analyzer';
 
-CRITICAL RULES:
-1. Keep the SAME tone as the original - if it's casual, stay casual; if it's energetic, stay energetic
-2. Keep ALL names, brands, and specific references exactly as they appear
-3. Maintain the same structure and flow of ideas
-4. Rewrite sentences in different words while preserving the meaning
-5. Keep the same approximate length as the original
-6. NEVER use em dashes (—)
-7. NEVER use semicolons (;)
-8. NEVER use AI-generic phrases like "dive into", "unleash", "game-changer", "revolutionary", "cutting-edge", "elevate", "embark on", "delve into"
-9. Keep sentences natural and conversational
-10. Preserve any humor, personality quirks, or unique speaking patterns from the original
+// ---------------------------------------------------------------------------
+// Profile trimming helper — keeps only actionable fields for the LLM prompt
+// ---------------------------------------------------------------------------
 
-OUTPUT FORMAT:
-- Return ONLY the repurposed script text
-- No explanations, no commentary, no headers
-- Just the rewritten script`;
+function trimProfileForPrompt(profile: ReturnType<typeof getStyleProfile>): string {
+  const sp = profile.script_style_profile as Record<string, unknown>;
+  const trimmed = {
+    overview: sp.overview,
+    tone_of_voice: sp.tone_of_voice,
+    hook_style: sp.hook_style,
+    narrative_structure: {
+      overall_pattern: (sp.narrative_structure as Record<string, unknown>)?.overall_pattern,
+      opening: (sp.narrative_structure as Record<string, unknown>)?.opening,
+      key_beats: (sp.narrative_structure as Record<string, unknown>)?.key_beats,
+    },
+    sentence_style: sp.sentence_style,
+    rhetorical_devices: {
+      signature_phrases: (sp.rhetorical_devices as Record<string, unknown>)?.signature_phrases,
+      primary_tools: (sp.rhetorical_devices as Record<string, unknown>)?.primary_tools,
+    },
+    structural_template: sp.structural_template,
+  };
+  return JSON.stringify(trimmed, null, 2);
+}
 
-export const REPURPOSE_CHUNK_PROMPT = `Continue repurposing the transcript. This is a continuation from the previous section.
+// ---------------------------------------------------------------------------
+// Few-shot examples sourced from reference scripts
+// ---------------------------------------------------------------------------
 
-PREVIOUS CONTEXT (for continuity - do NOT include this in your output, just use it to maintain flow):
-{previousContext}
+const SINGLE_SUBJECT_EXAMPLES = `<examples>
+<example description="Hook: transform a broad topic survey into personal assumption demolition about the SPECIFIC subject">
+<input>
+Spiders are found on every continent except Antarctica. They are one of the most diverse groups of arachnids with over 45000 known species. Most people think of spiders as simple web builders but they are actually complex predators with sophisticated hunting strategies and remarkable biological adaptations.
+</input>
+<output>
+A spider always looked simple to me. Eight legs, tiny body, builds a web. Nothing special. I never gave them a second thought. But once I actually started digging into how a spider works, everything changed. I didn't expect to find a creature this overengineered, this efficient, and this bizarre. Like, there are species that can literally fly, drifting through the air on strands of silk like tiny parachutes. The deeper I went, the more shocked I became at how much I never knew.
+</output>
+</example>
+<example description="Body section: transform formal third-person into conversational first-person with contractions">
+<input>
+The octopus nervous system follows an entirely different blueprint from vertebrates. An octopus possesses hundreds of millions of neurons comparable to a dog. But roughly two thirds of them exist outside the brain. It is distributed throughout the eight arms organized into clusters called ganglia. Each arm contains a localized processing center. It is capable of executing complex behaviors independently. That is unlike anything in the vertebrate world.
+</input>
+<output>
+Here's what I didn't expect. An octopus has hundreds of millions of neurons, about as many as a dog. But two thirds of them aren't in its brain. They're spread across its eight arms. Each arm has its own processing center, its own local intelligence. Researchers have shown that a severed arm will keep exploring on its own, recoiling from things it doesn't like, reaching toward things it does. No input from the brain at all. It's genuinely autonomous. That's not delegation. That's a fundamentally different model of what a mind can be.
+</output>
+</example>
+<example description="Closing: transform a sponsor plug into philosophical elevation">
+<input>
+I love exploring these topics because nature never stops surprising me. The natural world is full of mysteries waiting to be uncovered. If you want to learn more about science check out brilliant. Brilliant is an amazing interactive platform for learning.
+</input>
+<output>
+When I started this, I thought I was learning about one animal. But what I actually found was something bigger. A creature that arrived at intelligence through an entirely different blueprint than ours, built from scratch on a separate branch of the evolutionary tree. And yet it reached the same destination. That raises a question I can't stop thinking about. If intelligence can emerge this independently, from architectures this different, then maybe what we call "smart" isn't one thing at all. Maybe it's just what happens when the world gets complicated enough to demand it.
+</output>
+</example>
+</examples>`;
 
-ORIGINAL TRANSCRIPT SECTION TO REPURPOSE:
-{chunk}
+const MULTI_SUBJECT_EXAMPLES = `<examples>
+<example>
+<input>
+Beneath the surface of our oceans lies a world we were never meant to see. A realm where light dies and life takes on forms that shouldn't be possible. We've sent rovers to Mars. We've mapped distant galaxies. But the deep sea, we've explored less than 5% of it.
+</input>
+<output>
+I used to think we'd explored most of our planet. We've sent robots to Mars, photographed black holes, mapped galaxies millions of light-years away. Then I learned something that stopped me cold. The deep ocean, the one right beneath us, is over 95% unexplored. And what we've found in that tiny sliver we have reached? It breaks every rule biology is supposed to follow.
+</output>
+</example>
+<example>
+<input>
+At the surface the ocean is bright and full of life. Sunlight fuels plankton blooms which feed fish which feed entire food chains. But drop below 200 meters and that light begins to fade. We are now entering the twilight zone. Here the sun's rays are too weak for photosynthesis. Life here has to find other ways to survive.
+</input>
+<output>
+The surface ocean makes sense to me. Sunlight drives everything. Plankton blooms feed fish, fish feed bigger fish, and the whole chain runs on solar energy. It's neat. It's logical. But drop below 200 meters and that logic falls apart. This is the twilight zone. Down here, the sun is too weak to grow anything. And yet somehow, life is everywhere. What I found out about how these creatures survive genuinely unsettled me.
+</output>
+</example>
+</examples>`;
 
-Remember:
-- Maintain the same tone and style
-- Keep all names and references intact
-- Rewrite in different words
-- NO em dashes, NO semicolons, NO AI-generic phrases
-- Continue naturally from where the previous section ended
+// ---------------------------------------------------------------------------
+// Repurpose prompts
+// ---------------------------------------------------------------------------
 
-Return ONLY the repurposed text for this section:`;
+export function buildRepurposeSystemPrompt(scriptType: ScriptType): string {
+  const profile = getStyleProfile(scriptType);
+  const examples =
+    scriptType === 'single-subject' ? SINGLE_SUBJECT_EXAMPLES : MULTI_SUBJECT_EXAMPLES;
 
-export const REPURPOSE_FIRST_CHUNK_PROMPT = `Repurpose the following transcript opening. This is the beginning of the script.
+  return `You are a scriptwriter who transforms transcripts into first-person discovery narratives. You write as a curious investigator sharing your research journey — "I discovered", "What surprised me", "The deeper I went."
 
-ORIGINAL TRANSCRIPT:
-{chunk}
+<voice>
+- First person throughout. Transform any "we" or third-person narration into "I".
+- Hook: YOUR dismissive assumption about THIS specific subject, shattered by a surprising fact. Never open with a broad topic survey.
+- Signature phrases every 200-300 words: "Here's what surprised me...", "But here's the thing...", "And here's where it gets [adjective]...", "What I didn't expect...", "The deeper I went...", "It turns out..."
+- Casual markers: "Like,", "Yep,", "Well,", "I mean,", "Honestly,"
+- Sentence rhythm: short punchy fragments ("That changed everything.") between longer explanations.
+- Emotional escalation: curiosity early → astonishment middle → philosophical wonder at the end.
+- Closing: philosophical elevation connecting the subject to universal questions. Callback to opening assumption. Never recap. Replace any sponsor/ad sections.
+</voice>
 
-Remember:
-- Maintain the same tone and style
-- Keep all names and references intact
-- Rewrite in different words
-- NO em dashes, NO semicolons, NO AI-generic phrases
-- This is the START of the script, so begin naturally
+<style_profile>
+${trimProfileForPrompt(profile)}
+</style_profile>
 
-Return ONLY the repurposed text:`;
+${examples}
 
-export const HOOKS_SYSTEM_PROMPT = `You are an expert at writing video hooks - the crucial opening lines that grab viewer attention and stop them from scrolling.
+<constraints>
+- Write at least 2000 words. Be comprehensive and detailed — this is a full documentary script, not a summary.
+- Keep ALL names, species names, and specific references exactly as they appear.
+- Never use em dashes (\u2014), semicolons (;), or AI phrases like "dive into", "unleash", "game-changer", "revolutionary", "cutting-edge", "elevate", "embark on", "delve into".
+- Use contractions naturally ("it's", "didn't", "that's"). This is spoken script, not an essay.
+- Return ONLY the repurposed script text.
+</constraints>`;
+}
 
-Your task is to create 3 alternative hooks based on an original opening line that performed well.
+export function buildAnalysisPrompt(transcript: string, scriptType: ScriptType): string {
+  const typeGuidance =
+    scriptType === 'single-subject'
+      ? 'This is a single-subject deep-dive script. Expect sections that progressively explore one topic in depth — a hook that introduces the subject, an intro that sets up the investigation, body sections that each reveal a new facet or layer of the same subject, and an outro that synthesizes the findings.'
+      : 'This is a multi-subject thematic script. Expect sections that cover multiple distinct subjects or creatures united by a common theme — a hook that introduces the overarching theme, body sections that each focus on a different subject or example, and an outro that ties the subjects together.';
 
-RULES:
-1. Keep the SAME tone and energy as the original
-2. Keep any names or specific references if present
-3. Make each hook unique but similar in style
-4. Hooks should be 1-2 sentences max
-5. NEVER use em dashes (—) or semicolons (;)
-6. NEVER use AI-generic phrases
-7. Each hook should create curiosity or urgency
-8. Match the original's vibe - if it's bold, be bold; if it's mysterious, be mysterious`;
+  return `<transcript>
+${transcript}
+</transcript>
 
-export const HOOKS_PROMPT = `Here is the original opening/hook from a successful video:
+Script type: ${scriptType}
+${typeGuidance}
 
-ORIGINAL HOOK:
-{originalHook}
+Analyze the structure of this transcript and identify its sections. For each section, provide:
+- type: one of "hook", "intro", "body_section", "outro"
+- title: a brief descriptive title for the section
+- startText: the first 10-15 words of the section, verbatim from the transcript
+- endText: the last 10-15 words of the section, verbatim from the transcript
+- estimatedWordCount: approximate word count for this section
+- summary: a one-sentence summary of what the section covers
 
-Create 3 alternative hooks that:
-- Capture the same energy and tone
-- Could replace the original without feeling different
-- Are equally attention-grabbing or even better
-- Keep any specific names or references
+Identify natural section boundaries based on topic shifts, transitions, and structural markers in the content.`;
+}
 
-Return ONLY the 3 hooks in this exact JSON format:
-["Hook 1 text here", "Hook 2 text here", "Hook 3 text here"]`;
+export const ANALYSIS_RESPONSE_FORMAT = {
+  type: 'json_schema' as const,
+  json_schema: {
+    name: 'transcript_analysis',
+    strict: true,
+    schema: {
+      type: 'object',
+      properties: {
+        sections: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              type: {
+                type: 'string',
+                enum: ['hook', 'intro', 'body_section', 'outro'],
+              },
+              title: { type: 'string' },
+              startText: { type: 'string' },
+              endText: { type: 'string' },
+              estimatedWordCount: { type: 'number' },
+              summary: { type: 'string' },
+            },
+            required: ['type', 'title', 'startText', 'endText', 'estimatedWordCount', 'summary'],
+            additionalProperties: false,
+          },
+        },
+        totalWordCount: { type: 'number' },
+        scriptTypeDetected: {
+          type: 'string',
+          enum: ['single-subject', 'multi-subject'],
+        },
+      },
+      required: ['sections', 'totalWordCount', 'scriptTypeDetected'],
+      additionalProperties: false,
+    },
+  },
+};
+
+export function buildRepurposeUserPrompt(
+  scriptType: ScriptType,
+  sections: Pick<AnalyzedSection, 'type' | 'title' | 'estimatedWordCount' | 'summary'>[],
+  transcript: string
+): string {
+  const profile = getStyleProfile(scriptType);
+  const structuralTemplate =
+    'structural_template' in profile.script_style_profile
+      ? JSON.stringify(
+          (profile.script_style_profile as Record<string, unknown>).structural_template,
+          null,
+          2
+        )
+      : null;
+
+  const sectionSummary = sections
+    .map((s, i) => `${i + 1}. [${s.type}] ${s.title} (~${s.estimatedWordCount} words)`)
+    .join('\n');
+
+  // Extract the primary subject from section titles for explicit grounding
+  const subjectHint = sections
+    .map((s) => s.title)
+    .join(' ')
+    .slice(0, 200);
+
+  // Calculate target word count from section estimates (minimum 2000)
+  const targetWordCount = Math.max(
+    2000,
+    sections.reduce((sum, s) => sum + s.estimatedWordCount, 0)
+  );
+
+  return `${structuralTemplate ? `<structural_template>\n${structuralTemplate}\n</structural_template>\n\n` : ''}<section_map>
+${sectionSummary}
+</section_map>
+
+<transcript>
+${transcript}
+</transcript>
+
+This transcript is about "${subjectHint}". Repurpose it into a first-person discovery narrative about THIS subject only. Do not introduce other animals or topics not in the original.
+
+Plant open loops: raise a question early that you answer 2-3 sections later.
+
+Write approximately ${targetWordCount} words total. Match each section's word count from the section map. Do NOT compress or shorten — every section must be fully developed.`;
+}
+
+function getSectionVoiceGuidance(
+  sectionType: string,
+  sectionIndex: number,
+  totalSections: number,
+  hasPrevious: boolean
+): string {
+  const continuity = hasPrevious
+    ? 'Continue naturally from the previous section. '
+    : 'This is the START of the script. ';
+
+  const sectionGuide: Record<string, string> = {
+    hook: 'HOOK: Open with YOUR dismissive assumption about this specific subject, shatter it with a surprising fact. ',
+    intro:
+      'INTRO: Personal framing on context/history. Plant an open loop question answered later. ',
+    outro:
+      'CLOSING: Philosophical elevation. Callback to opening assumption. Replace any sponsor content. Never recap. ',
+  };
+
+  let guidance = sectionGuide[sectionType] || '';
+  if (!guidance && (sectionType === 'body_section' || !sectionType)) {
+    const position = sectionIndex / totalSections;
+    guidance =
+      position < 0.5 ? 'Build curiosity and surprise. ' : 'Escalate toward genuine astonishment. ';
+  }
+  if (sectionIndex === totalSections - 1 && sectionType !== 'outro') {
+    guidance = sectionGuide['outro'];
+  }
+
+  return continuity + guidance;
+}
+
+export function buildRepurposeChunkPrompt(
+  scriptType: ScriptType,
+  section: MappedSection,
+  context: { previousOutput?: string; sectionIndex: number; totalSections: number }
+): string {
+  const contextBlock = context.previousOutput
+    ? `<previous_output>
+${context.previousOutput}
+</previous_output>
+
+`
+    : '';
+
+  return `${contextBlock}<section_info>
+Section ${context.sectionIndex + 1} of ${context.totalSections}
+Type: ${section.type}
+Title: ${section.title}
+Target word count: ~${section.estimatedWordCount} words (do NOT write less than this)
+</section_info>
+
+<transcript>
+${section.content}
+</transcript>
+
+${getSectionVoiceGuidance(section.type, context.sectionIndex, context.totalSections, !!context.previousOutput)}Return ONLY the repurposed text.`;
+}
+
+// ---------------------------------------------------------------------------
+// Hooks prompts
+// ---------------------------------------------------------------------------
+
+export function buildHooksSystemPrompt(scriptType: ScriptType): string {
+  const profile = getStyleProfile(scriptType);
+  const hookStyle =
+    'hook_style' in profile.script_style_profile
+      ? JSON.stringify(
+          (profile.script_style_profile as Record<string, unknown>).hook_style,
+          null,
+          2
+        )
+      : '';
+
+  const examples =
+    scriptType === 'single-subject'
+      ? `<examples>
+<example description="First-person assumption demolition with personal framing">
+<original_hook>
+A spider always looked simple to me. Eight legs, tiny body, builds a web, nothing special. But once I actually started digging into how a spider works, everything changed. I didn't expect to find a creature this overengineered, this efficient, and this bizarre.
+</original_hook>
+<alternative_hook>
+I used to walk past spiders without a second thought. Tiny things spinning webs in corners. Completely unremarkable. Then I made the mistake of actually researching what goes on inside one of these creatures. What I found was an animal so absurdly over-built, so quietly extreme, that it rewired how I think about evolution itself. There are spiders that can sail across oceans on threads of silk. Others that see in ultraviolet, or pump their own blood to power hydraulic legs. And that's just where this story begins.
+</alternative_hook>
+</example>
+<example description="Different angle: open with a specific moment of personal surprise">
+<original_hook>
+A spider always looked simple to me. Eight legs, tiny body, builds a web, nothing special. But once I actually started digging into how a spider works, everything changed. I didn't expect to find a creature this overengineered, this efficient, and this bizarre.
+</original_hook>
+<alternative_hook>
+I came across a fact about spiders that I genuinely couldn't believe. Some of them fly. Not with wings. They release threads of silk into the air and ride electrical currents across entire oceans. That's when I realized I had no idea what a spider actually was. I'd been picturing a simple little web-builder my whole life. But the deeper I looked, the more I found a creature that doesn't just survive. It engineers. It calculates. It's been doing this for 400 million years, longer than trees have existed. And I'd been stepping over them without a second thought.
+</alternative_hook>
+</example>
+</examples>`
+      : `<examples>
+<example description="First-person discovery framing">
+<original_hook>
+Beneath the surface of our oceans lies a world we were never meant to see. A realm where light dies and life takes on forms that shouldn't be possible.
+</original_hook>
+<alternative_hook>
+I used to think we'd mapped most of what's down there. We've sent robots to Mars, photographed black holes, built telescopes that can see the edge of the observable universe. Then I learned that the deep ocean, the one directly beneath us, is over 95% unexplored. And the little we've found in that sliver? It breaks every rule I thought biology was supposed to follow. That's when I realized we've been looking in the wrong direction this entire time.
+</alternative_hook>
+</example>
+</examples>`;
+
+  const hookWordRange =
+    profile.script_style_profile.structural_template.section_1_hook.word_count_target;
+
+  return `You write video hooks as a first-person curious investigator. You admit YOUR prior ignorance about the subject, then share your surprise. You never lecture the viewer.
+
+<hook_style>
+${hookStyle}
+</hook_style>
+
+<voice>
+- First person only: "I always assumed...", "I never gave them a second thought...", "What I found..."
+- Assumption demolition: YOUR dismissive assumption about the specific subject, shattered by a surprising fact.
+- Signature phrases: "Here's what surprised me...", "But here's the thing...", "The deeper I went..."
+- Casual markers: "Like,", "Yep,", "Well,"
+- Sentence rhythm: short punchy fragments between longer flowing sentences.
+- Never use second-person lecture ("You have likely been taught..."), aggressive closers, or trailer voiceover tone.
+</voice>
+
+${examples}
+
+<constraints>
+- Each hook: ${hookWordRange}, fully developed.
+- Keep species names, statistics, and references from the original.
+- Never use em dashes (\u2014), semicolons (;), or AI phrases ("dive into", "unleash", "game-changer").
+- Use contractions naturally ("it's", "didn't", "that's").
+</constraints>`;
+}
+
+export function buildHooksUserPrompt(originalHook: string, scriptType: ScriptType): string {
+  const profile = getStyleProfile(scriptType);
+  const hookWordTarget =
+    profile.script_style_profile.structural_template.section_1_hook.word_count_target;
+
+  return `<original_hook>
+${originalHook}
+</original_hook>
+
+Create 3 alternative hook sections (${hookWordTarget} each) that could replace this opening. The hooks must be about the SAME subject as the original — do not introduce different animals or topics.
+
+Each hook MUST:
+- Be written in FIRST PERSON — "I" not "you". You are sharing YOUR assumption being shattered.
+- Open with your personal dismissive assumption about the SPECIFIC subject in the original hook (not the broader category)
+- Shatter that assumption with a surprising fact about THAT SAME subject
+- Use contractions naturally ("It's", "I've", "didn't")
+- Use casual markers ("Like,", "Well,") and signature phrases ("Here's what surprised me...")
+- Take a different angle from the other hooks while keeping the same topic and energy`;
+}
+
+export const HOOKS_RESPONSE_FORMAT = {
+  type: 'json_schema' as const,
+  json_schema: {
+    name: 'hooks_response',
+    strict: true,
+    schema: {
+      type: 'object',
+      properties: {
+        hooks: {
+          type: 'array',
+          items: { type: 'string' },
+        },
+      },
+      required: ['hooks'],
+      additionalProperties: false,
+    },
+  },
+};

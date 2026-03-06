@@ -32,6 +32,8 @@ export async function GET(request: NextRequest) {
       hooks: script.hooks,
       notes: script.notes,
       status: script.status,
+      scriptType: script.scriptType,
+      sourceUrl: script.sourceUrl,
       createdAt: script.createdAt.toISOString(),
       updatedAt: script.updatedAt.toISOString(),
     }));
@@ -57,12 +59,13 @@ export async function POST(request: NextRequest) {
     } catch {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
-    const { title, caption, script, notes, status } = body as {
+    const { title, caption, script, notes, status, scriptType } = body as {
       title: string;
       caption?: string;
       script: string;
       notes?: string;
       status?: string;
+      scriptType?: string;
     };
 
     if (!title || !script) {
@@ -77,6 +80,7 @@ export async function POST(request: NextRequest) {
         script,
         notes: notes || null,
         status: status || 'draft',
+        scriptType: scriptType || 'single-subject',
       },
     });
 
@@ -89,6 +93,7 @@ export async function POST(request: NextRequest) {
         script: newScript.script,
         notes: newScript.notes,
         status: newScript.status,
+        scriptType: newScript.scriptType,
         createdAt: newScript.createdAt.toISOString(),
         updatedAt: newScript.updatedAt.toISOString(),
       },
@@ -121,13 +126,14 @@ export async function PUT(request: NextRequest) {
     } catch {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
-    const { id, title, caption, script, notes, status } = body as {
+    const { id, title, caption, script, notes, status, scriptType } = body as {
       id: string;
       title?: string;
       caption?: string;
       script?: string;
       notes?: string;
       status?: string;
+      scriptType?: string;
     };
 
     if (!id) {
@@ -151,6 +157,7 @@ export async function PUT(request: NextRequest) {
         ...(script !== undefined ? { script } : {}),
         ...(notes !== undefined ? { notes } : {}),
         ...(status !== undefined ? { status } : {}),
+        ...(scriptType !== undefined ? { scriptType } : {}),
       },
     });
 
@@ -163,6 +170,7 @@ export async function PUT(request: NextRequest) {
         script: updated.script,
         notes: updated.notes,
         status: updated.status,
+        scriptType: updated.scriptType,
         createdAt: updated.createdAt.toISOString(),
         updatedAt: updated.updatedAt.toISOString(),
       },

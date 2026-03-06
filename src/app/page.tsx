@@ -27,8 +27,10 @@ import {
   searchTikTokWithDetails,
   searchInstagramWithDetails,
 } from '@/lib/api';
+import { ScriptTypeToggle } from '@/components/repurpose/ScriptTypeToggle';
 import type {
   Platform,
+  ScriptType,
   YouTubeTableData,
   TikTokTableData,
   SavedSearchWithResults,
@@ -52,6 +54,7 @@ export default function Home() {
   const [hasYouTubeKey, setHasYouTubeKey] = useState<boolean | null>(null);
 
   // Repurpose & Scripts state
+  const [scriptType, setScriptType] = useState<ScriptType>('single-subject');
   const [viewMode, setViewMode] = useState<ViewMode>('search');
   const [repurposeVideos, setRepurposeVideos] = useState<RepurposeVideo[]>([]);
   const [scripts, setScripts] = useState<Script[]>([]);
@@ -372,158 +375,166 @@ export default function Home() {
   }, []);
 
   // Handle URL repurpose - from search input with streaming progress
-  const handleUrlRepurpose = useCallback(async (url: string) => {
-    setIsProcessing(true);
-    setProcessingStatus('Extracting transcript');
-    setProcessingSubtitle('Connecting to YouTube...');
-    setProcessingProgress(undefined);
-
-    try {
-      const response = await fetch('/api/repurpose-url', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'text/event-stream',
-        },
-        body: JSON.stringify({ url }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to repurpose');
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No response body');
-
-      const decoder = new TextDecoder();
-      let buffer = '';
+  const handleUrlRepurpose = useCallback(
+    async (url: string) => {
+      setIsProcessing(true);
+      setProcessingStatus('Extracting transcript');
+      setProcessingSubtitle('Connecting to YouTube...');
+      setProcessingProgress(undefined);
 
       try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+        const response = await fetch('/api/repurpose-url', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'text/event-stream',
+          },
+          body: JSON.stringify({ url, scriptType }),
+        });
 
-          buffer += decoder.decode(value, { stream: true });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to repurpose');
+        }
 
-          // SSE format: "event: type\ndata: json\n\n"
-          // Split on double newlines to get complete events
-          const events = buffer.split('\n\n');
-          buffer = events.pop() || ''; // Keep incomplete event in buffer
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('No response body');
 
-          for (const event of events) {
-            if (!event.trim()) continue;
+        const decoder = new TextDecoder();
+        let buffer = '';
 
-            const lines = event.split('\n');
-            let eventType = '';
-            let eventData = '';
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-            for (const line of lines) {
-              if (line.startsWith('event: ')) {
-                eventType = line.slice(7);
-              } else if (line.startsWith('data: ')) {
-                eventData = line.slice(6);
+            buffer += decoder.decode(value, { stream: true });
+
+            // SSE format: "event: type\ndata: json\n\n"
+            // Split on double newlines to get complete events
+            const events = buffer.split('\n\n');
+            buffer = events.pop() || ''; // Keep incomplete event in buffer
+
+            for (const event of events) {
+              if (!event.trim()) continue;
+
+              const lines = event.split('\n');
+              let eventType = '';
+              let eventData = '';
+
+              for (const line of lines) {
+                if (line.startsWith('event: ')) {
+                  eventType = line.slice(7);
+                } else if (line.startsWith('data: ')) {
+                  eventData = line.slice(6);
+                }
               }
-            }
 
-            if (!eventType || !eventData) continue;
+              if (!eventType || !eventData) continue;
 
-            let data;
-            try {
-              data = JSON.parse(eventData);
-            } catch {
-              console.error('Failed to parse SSE event data:', eventData);
-              continue;
-            }
-
-            if (eventType === 'progress') {
-              // Map step to user-friendly status with progress indicators
-              // Steps: extracting(1) -> analyzing(2) -> processing_chunk(3-N) -> generating_hooks -> finalizing(N+1)
-              const stepMessages: Record<
-                string,
-                { status: string; subtitle: string; baseProgress: number }
-              > = {
-                extracting: {
-                  status: 'Extracting transcript',
-                  subtitle: 'Fetching video content...',
-                  baseProgress: 10,
-                },
-                analyzing: {
-                  status: 'Analyzing content',
-                  subtitle: 'Preparing for repurposing...',
-                  baseProgress: 20,
-                },
-                processing_chunk: {
-                  status: 'Repurposing content',
-                  subtitle: 'AI is transforming your script...',
-                  baseProgress: 30, // 30-85% range for chunks
-                },
-                generating_hooks: {
-                  status: 'Generating hooks',
-                  subtitle: 'Creating engaging openers...',
-                  baseProgress: 90,
-                },
-                finalizing: {
-                  status: 'Finalizing',
-                  subtitle: 'Almost done...',
-                  baseProgress: 95,
-                },
-              };
-
-              const stepInfo = stepMessages[data.step] || {
-                status: data.message,
-                subtitle: '',
-                baseProgress: 50,
-              };
-              setProcessingStatus(stepInfo.status);
-              setProcessingSubtitle(stepInfo.subtitle);
-
-              // Calculate progress based on step
-              if (data.step === 'processing_chunk' && data.current && data.total) {
-                // Chunk processing: 30% to 85%
-                const chunkProgress = (data.current / data.total) * 55 + 30;
-                setProcessingProgress({
-                  current: Math.round(chunkProgress),
-                  total: 100,
-                });
-              } else {
-                // Other steps: use base progress
-                setProcessingProgress({
-                  current: stepInfo.baseProgress,
-                  total: 100,
-                });
+              let data;
+              try {
+                data = JSON.parse(eventData);
+              } catch {
+                console.error('Failed to parse SSE event data:', eventData);
+                continue;
               }
-            } else if (eventType === 'complete') {
-              toast.success(
-                data.alreadyExists
-                  ? 'Script already exists'
-                  : `Repurposed successfully (${data.chunksProcessed} chunks)`
-              );
-              // Refresh scripts and navigate to scripts view
-              const scriptsResponse = await fetch('/api/scripts');
-              if (scriptsResponse.ok) {
-                const scriptsData = await scriptsResponse.json();
-                setScripts(scriptsData.scripts);
+
+              if (eventType === 'progress') {
+                // Map step to user-friendly status with progress indicators
+                // Steps: extracting(1) -> analyzing(2) -> processing_chunk(3-N) -> generating_hooks -> finalizing(N+1)
+                const stepMessages: Record<
+                  string,
+                  { status: string; subtitle: string; baseProgress: number }
+                > = {
+                  extracting: {
+                    status: 'Extracting transcript',
+                    subtitle: 'Fetching video content...',
+                    baseProgress: 10,
+                  },
+                  analyzing_structure: {
+                    status: 'Analyzing transcript structure',
+                    subtitle: 'Identifying sections and patterns...',
+                    baseProgress: 20,
+                  },
+                  processing: {
+                    status: 'Repurposing transcript',
+                    subtitle: 'AI is transforming your script...',
+                    baseProgress: 30,
+                  },
+                  processing_chunk: {
+                    status: 'Repurposing content',
+                    subtitle: 'AI is transforming your script...',
+                    baseProgress: 35, // 35-85% range for chunks
+                  },
+                  generating_hooks: {
+                    status: 'Generating hooks',
+                    subtitle: 'Creating engaging hook sections...',
+                    baseProgress: 90,
+                  },
+                  finalizing: {
+                    status: 'Finalizing',
+                    subtitle: 'Almost done...',
+                    baseProgress: 95,
+                  },
+                };
+
+                const stepInfo = stepMessages[data.step] || {
+                  status: data.message,
+                  subtitle: '',
+                  baseProgress: 50,
+                };
+                setProcessingStatus(stepInfo.status);
+                setProcessingSubtitle(stepInfo.subtitle);
+
+                // Calculate progress based on step
+                if (data.step === 'processing_chunk' && data.current && data.total) {
+                  // Chunk processing: 30% to 85%
+                  const chunkProgress = (data.current / data.total) * 55 + 30;
+                  setProcessingProgress({
+                    current: Math.round(chunkProgress),
+                    total: 100,
+                  });
+                } else {
+                  // Other steps: use base progress
+                  setProcessingProgress({
+                    current: stepInfo.baseProgress,
+                    total: 100,
+                  });
+                }
+              } else if (eventType === 'complete') {
+                toast.success(
+                  data.alreadyExists
+                    ? 'Script already exists'
+                    : `Repurposed successfully (${data.chunksProcessed} chunks)`
+                );
+                // Refresh scripts and navigate to scripts view
+                const scriptsResponse = await fetch('/api/scripts');
+                if (scriptsResponse.ok) {
+                  const scriptsData = await scriptsResponse.json();
+                  setScripts(scriptsData.scripts);
+                }
+                setSearchQuery('');
+                setViewMode('scripts');
+              } else if (eventType === 'error') {
+                throw new Error(data.error || 'Failed to repurpose');
               }
-              setSearchQuery('');
-              setViewMode('scripts');
-            } else if (eventType === 'error') {
-              throw new Error(data.error || 'Failed to repurpose');
             }
           }
+        } finally {
+          reader.releaseLock();
         }
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to repurpose');
       } finally {
-        reader.releaseLock();
+        setIsProcessing(false);
+        setProcessingStatus('');
+        setProcessingSubtitle(undefined);
+        setProcessingProgress(undefined);
       }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to repurpose');
-    } finally {
-      setIsProcessing(false);
-      setProcessingStatus('');
-      setProcessingSubtitle(undefined);
-      setProcessingProgress(undefined);
-    }
-  }, []);
+    },
+    [scriptType]
+  );
 
   // Memoized columns
   const memoizedRepurposeColumns = useMemo(
@@ -662,6 +673,13 @@ export default function Home() {
                 <span className="inline-flex items-center rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-white/60 font-mono tabular-nums">
                   ~{formatTime(cumulativeTime[cumulativeTime.length - 1] || 0)} read
                 </span>
+                {selectedScript.scriptType && (
+                  <span className="inline-flex items-center rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-white/60">
+                    {selectedScript.scriptType === 'multi-subject'
+                      ? 'Multi Subject'
+                      : 'Single Subject'}
+                  </span>
+                )}
                 {viewingRepurposed && (
                   <span className="inline-flex items-center rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs text-emerald-400">
                     Repurposed
@@ -730,9 +748,9 @@ export default function Home() {
                               }
                               className="text-left w-full"
                             >
-                              <p className="text-sm sm:text-base text-white/80 group-hover:text-white leading-7 transition-colors">
+                              <div className="text-sm sm:text-base text-white/80 group-hover:text-white leading-7 transition-colors whitespace-pre-line">
                                 {displayText}
-                              </p>
+                              </div>
                             </button>
                           </div>
                         ) : (
@@ -899,6 +917,19 @@ export default function Home() {
               isLoading={isSearching || isProcessing}
               platform={selectedPlatform}
             />
+            {/* Script Type Toggle - shown when a YouTube URL is detected in search input */}
+            {selectedPlatform === 'youtube' &&
+              /^https?:\/\/(www\.)?(youtube\.com|youtu\.be|m\.youtube\.com)/i.test(
+                searchQuery.trim()
+              ) && (
+                <div className="mt-3 flex justify-center">
+                  <ScriptTypeToggle
+                    value={scriptType}
+                    onChange={setScriptType}
+                    disabled={isProcessing}
+                  />
+                </div>
+              )}
           </div>
         </div>
 

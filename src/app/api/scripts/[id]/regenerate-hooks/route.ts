@@ -2,8 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireUserId } from '@/lib/auth-utils';
 import { prisma } from '@/lib/db';
 import { createChatCompletion } from '@/lib/openrouter';
-import { HOOKS_SYSTEM_PROMPT, HOOKS_PROMPT } from '@/lib/repurpose/prompts';
+import {
+  buildHooksSystemPrompt,
+  buildHooksUserPrompt,
+  HOOKS_RESPONSE_FORMAT,
+} from '@/lib/repurpose/prompts';
 import { extractOriginalHook } from '@/lib/repurpose/chunker';
+import { validateScriptType } from '@/lib/repurpose';
+import { isApiError } from '@/lib/errors';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -14,6 +21,15 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
   try {
     const userId = await requireUserId();
     const { id } = await params;
+
+    // Rate limit expensive operations
+    const rateLimit = checkRateLimit(`hooks:${userId}`, RATE_LIMITS.expensive);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please try again later.' },
+        { status: 429 }
+      );
+    }
 
     // Get the script
     const script = await prisma.script.findUnique({
@@ -40,36 +56,33 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Extract original hook from the script
-    const originalHook = extractOriginalHook(script.script);
-    const prompt = HOOKS_PROMPT.replace('{originalHook}', originalHook);
+    const scriptType = validateScriptType(script.scriptType);
 
-    // Generate new hooks
+    // Extract hook from repurposed script if available, otherwise fall back to original
+    const originalHook = script.repurposedScript
+      ? extractOriginalHook(script.repurposedScript)
+      : extractOriginalHook(script.script);
+
+    // Generate new hooks using style-aware prompts
     const response = await createChatCompletion({
       userId,
       model: settings.selectedModelId,
       messages: [
-        { role: 'system', content: HOOKS_SYSTEM_PROMPT },
-        { role: 'user', content: prompt },
+        { role: 'system', content: buildHooksSystemPrompt(scriptType) },
+        { role: 'user', content: buildHooksUserPrompt(originalHook, scriptType) },
       ],
-      temperature: 0.9, // Higher temperature for more variation
+      response_format: HOOKS_RESPONSE_FORMAT,
     });
 
-    const content = response.choices[0]?.message?.content || '[]';
+    const content = response.choices[0]?.message?.content || '{"hooks":[]}';
 
-    // Parse the JSON array
     let hooks: string[] = [];
     try {
-      const cleanedContent = content.replace(/```json\n?|\n?```/g, '').trim();
-      const parsed = JSON.parse(cleanedContent);
-
-      if (Array.isArray(parsed) && parsed.length >= 3) {
-        hooks = parsed.slice(0, 3);
-      } else if (Array.isArray(parsed)) {
-        hooks = parsed;
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed.hooks)) {
+        hooks = parsed.hooks.slice(0, 3);
       }
     } catch {
-      // Fallback: try to extract hooks from text
       const lines = content.split('\n').filter((line) => line.trim().length > 10);
       hooks = lines.slice(0, 3).map((line) => line.replace(/^[\d.\-*]+\s*/, '').trim());
     }
@@ -85,6 +98,17 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
       hooks,
     });
   } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      if (error.message.includes('No LLM model selected')) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+    }
+    if (isApiError(error)) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
     console.error('Error regenerating hooks:', error);
     return NextResponse.json({ error: 'Failed to regenerate hooks' }, { status: 500 });
   }

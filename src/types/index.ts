@@ -82,6 +82,7 @@ export interface RepurposeVideo {
 }
 
 export type ScriptStatus = 'draft' | 'in_progress' | 'completed';
+export type ScriptType = 'single-subject' | 'multi-subject';
 
 export interface Script {
   id: string;
@@ -92,6 +93,7 @@ export interface Script {
   hooks?: string[] | null;
   notes?: string | null;
   status: ScriptStatus;
+  scriptType?: ScriptType;
   sourceUrl?: string | null;
   repurposeVideoId?: string | null;
   createdAt: string;

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getYouTubeTranscriptFast } from '@/lib/rapidapi';
-import { repurposeTranscript, type ProgressUpdate } from '@/lib/repurpose';
+import { repurposeTranscript, validateScriptType, type ProgressUpdate } from '@/lib/repurpose';
 import { requireValidUser } from '@/lib/auth-utils';
 import { isApiError } from '@/lib/errors';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
@@ -98,7 +98,16 @@ async function handleStreamingRequest(request: NextRequest) {
         await writer.close();
         return;
       }
-      const { url, lang = 'en' } = body as { url: string; lang?: string };
+      const {
+        url,
+        lang = 'en',
+        scriptType: rawScriptType,
+      } = body as {
+        url: string;
+        lang?: string;
+        scriptType?: string;
+      };
+      const scriptType = validateScriptType(rawScriptType);
 
       if (!url) {
         await writeEvent('error', { error: 'URL is required' });
@@ -113,9 +122,9 @@ async function handleStreamingRequest(request: NextRequest) {
         return;
       }
 
-      // Check for existing script
+      // Check for existing script with same URL and scriptType
       const existingScript = await prisma.script.findFirst({
-        where: { sourceUrl: url, userId },
+        where: { sourceUrl: url, userId, scriptType },
       });
 
       if (existingScript?.repurposedScript) {
@@ -128,6 +137,7 @@ async function handleStreamingRequest(request: NextRequest) {
             repurposedScript: existingScript.repurposedScript,
             hooks: existingScript.hooks,
             status: existingScript.status,
+            scriptType: existingScript.scriptType,
             createdAt: existingScript.createdAt.toISOString(),
             updatedAt: existingScript.updatedAt.toISOString(),
           },
@@ -161,6 +171,7 @@ async function handleStreamingRequest(request: NextRequest) {
             script: transcriptResult.transcript,
             sourceUrl: url,
             status: 'draft',
+            scriptType,
           },
         });
       }
@@ -169,6 +180,7 @@ async function handleStreamingRequest(request: NextRequest) {
       const repurposeResult = await repurposeTranscript(
         userId,
         transcriptResult.transcript,
+        scriptType,
         async (update: ProgressUpdate) => {
           await writeEvent('progress', update);
         }
@@ -181,6 +193,7 @@ async function handleStreamingRequest(request: NextRequest) {
           repurposedScript: repurposeResult.repurposedScript,
           hooks: repurposeResult.hooks,
           status: 'in_progress',
+          scriptType,
         },
       });
 
@@ -194,6 +207,7 @@ async function handleStreamingRequest(request: NextRequest) {
           repurposedScript: updatedScript.repurposedScript,
           hooks: updatedScript.hooks,
           status: updatedScript.status,
+          scriptType: updatedScript.scriptType,
           createdAt: updatedScript.createdAt.toISOString(),
           updatedAt: updatedScript.updatedAt.toISOString(),
         },
@@ -240,11 +254,31 @@ async function handleNonStreamingRequest(request: NextRequest) {
   try {
     const userId = await requireValidUser();
 
-    const body = await request.json();
-    const { url, lang = 'en' } = body as {
+    // Rate limit expensive operations
+    const rateLimit = checkRateLimit(`repurpose:${userId}`, RATE_LIMITS.expensive);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
+    const {
+      url,
+      lang = 'en',
+      scriptType: rawScriptType,
+    } = body as {
       url: string;
       lang?: string;
+      scriptType?: string;
     };
+    const scriptType = validateScriptType(rawScriptType);
 
     if (!url) {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 });
@@ -256,9 +290,9 @@ async function handleNonStreamingRequest(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400 });
     }
 
-    // Check if a script already exists for this URL
+    // Check if a script already exists for this URL and scriptType
     const existingScript = await prisma.script.findFirst({
-      where: { sourceUrl: url, userId },
+      where: { sourceUrl: url, userId, scriptType },
     });
 
     if (existingScript) {
@@ -273,6 +307,7 @@ async function handleNonStreamingRequest(request: NextRequest) {
             repurposedScript: existingScript.repurposedScript,
             hooks: existingScript.hooks,
             status: existingScript.status,
+            scriptType: existingScript.scriptType,
             createdAt: existingScript.createdAt.toISOString(),
             updatedAt: existingScript.updatedAt.toISOString(),
           },
@@ -303,12 +338,17 @@ async function handleNonStreamingRequest(request: NextRequest) {
           script: transcriptResult.transcript,
           sourceUrl: url,
           status: 'draft',
+          scriptType,
         },
       });
     }
 
     // Repurpose the transcript
-    const repurposeResult = await repurposeTranscript(userId, transcriptResult.transcript);
+    const repurposeResult = await repurposeTranscript(
+      userId,
+      transcriptResult.transcript,
+      scriptType
+    );
 
     // Update script with repurposed content
     const updatedScript = await prisma.script.update({
@@ -317,6 +357,7 @@ async function handleNonStreamingRequest(request: NextRequest) {
         repurposedScript: repurposeResult.repurposedScript,
         hooks: repurposeResult.hooks,
         status: 'in_progress',
+        scriptType,
       },
     });
 
@@ -329,6 +370,7 @@ async function handleNonStreamingRequest(request: NextRequest) {
         repurposedScript: updatedScript.repurposedScript,
         hooks: updatedScript.hooks,
         status: updatedScript.status,
+        scriptType: updatedScript.scriptType,
         createdAt: updatedScript.createdAt.toISOString(),
         updatedAt: updatedScript.updatedAt.toISOString(),
       },

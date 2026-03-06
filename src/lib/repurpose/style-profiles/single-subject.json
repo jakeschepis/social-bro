@@ -1,0 +1,224 @@
+{
+  "script_style_profile": {
+    "overview": {
+      "genre": "Educational documentary with narrative mystery-solving structure",
+      "core_approach": "Progressive revelation that transforms mundane perception into extraordinary discovery",
+      "defining_characteristic": "Takes seemingly ordinary subject and systematically reveals hidden complexity through escalating wonder"
+    },
+    "tone_of_voice": {
+      "primary": "Conversational yet authoritative",
+      "secondary": "Wonder-infused and intellectually curious",
+      "tertiary": "Casually dramatic without being sensational",
+      "descriptors": [
+        "accessible",
+        "enthusiastic",
+        "genuinely surprised",
+        "infectiously curious",
+        "respectfully scientific"
+      ]
+    },
+    "narrative_structure": {
+      "overall_pattern": "Mystery-to-revelation arc",
+      "opening": "Personal assumption challenge - 'I thought X was simple/normal, but...'",
+      "progression": "Chronological deep-dive with escalating complexity",
+      "rhythm": "Wave pattern of facts building to conceptual breakthroughs",
+      "closure": "Philosophical elevation - connects specific subject to universal questions",
+      "key_beats": [
+        "Initial dismissal or oversimplification",
+        "First surprising discovery that hooks deeper investigation",
+        "Historical/evolutionary foundation",
+        "Progressive revelation of mechanisms",
+        "Cognitive challenge to viewer assumptions",
+        "Philosophical implications about nature/intelligence/existence"
+      ]
+    },
+    "hook_style": {
+      "technique": "Assumption demolition",
+      "pattern": "Present common perception → immediate contradiction → promise of mind-changing depth",
+      "opening_move": "Subject appears simple/normal/understood",
+      "reversal_timing": "Within first 30 seconds",
+      "promise": "Everything you think you know is incomplete"
+    },
+    "pacing": {
+      "overall": "Steadily accelerating complexity",
+      "sentence_rhythm": "Variable - alternates between punchy revelations and flowing explanations",
+      "information_density": "High but digestible through strategic breaks",
+      "momentum_technique": "Each fact creates appetite for next deeper layer"
+    },
+    "sentence_style": {
+      "variety": "Deliberately mixed for rhythm and emphasis",
+      "short_sentences_used_for": [
+        "Impact statements",
+        "Surprising facts",
+        "Transitions",
+        "Emphasis"
+      ],
+      "long_sentences_used_for": [
+        "Complex mechanisms",
+        "Building atmosphere",
+        "Connecting concepts"
+      ],
+      "fragment_usage": "Strategic - for dramatic emphasis or conversational realism",
+      "examples_of_patterns": [
+        "Statement. Clarification. Impact.",
+        "Question? Answer that exceeds expectation.",
+        "Setup, setup, setup—payoff.",
+        "Casual observation. Technical depth. Return to accessible wonder."
+      ]
+    },
+    "rhetorical_devices": {
+      "primary_tools": [
+        "Analogies to familiar experiences",
+        "Comparative frameworks (stronger than X, older than Y)",
+        "Rhetorical questions that drive investigation",
+        "Expectation subversion",
+        "Scale reframing (making tiny seem massive, ancient seem present)",
+        "Perspective shifting"
+      ],
+      "signature_phrases": [
+        "'Here's what surprised me...'",
+        "'But here's the thing...'",
+        "'And here's where it gets [adjective]...'",
+        "'This is where things get genuinely strange'",
+        "'What I didn't expect...'",
+        "'The deeper I went...'",
+        "'It turns out...'"
+      ],
+      "repetition_strategy": "Callback to opening assumptions to measure journey traveled",
+      "suspense_building": "Open loops through questions answered 2-3 segments later"
+    },
+    "emotional_progression": {
+      "act_1": "Curiosity and mild surprise",
+      "act_2": "Growing astonishment and intellectual excitement",
+      "act_3": "Profound wonder and philosophical contemplation",
+      "sustained_notes": ["Respect for subject", "Joy of discovery", "Humility before complexity"],
+      "avoided_tones": [
+        "Condescension",
+        "Exaggeration",
+        "False certainty",
+        "Oversimplification for entertainment"
+      ]
+    },
+    "information_architecture": {
+      "layering_principle": "Each fact builds on previous while opening new questions",
+      "complexity_scaling": "Gradual - starts accessible, reaches technical, returns to philosophical",
+      "scientific_rigor": "High accuracy with conversational delivery",
+      "source_integration": "Facts presented with authority but specific studies mentioned sparingly",
+      "technical_terminology": "Introduced with immediate clarification or context"
+    },
+    "point_of_view": {
+      "narrative_voice": "First-person experiential journey",
+      "relationship_to_viewer": "Fellow curious investigator sharing discoveries",
+      "authority_positioning": "Earned through research journey, not assumed expertise",
+      "vulnerability": "Openly admits prior ignorance and ongoing surprise"
+    },
+    "audience_engagement": {
+      "direct_address": "Frequent but natural",
+      "assumed_viewer_position": "Intelligent but uninformed about specifics",
+      "knowledge_baseline": "Common cultural knowledge, no specialist background required",
+      "challenge_technique": "Questions what viewer thinks they know without insulting",
+      "inclusive_language": "'We thought', 'Our assumptions', 'What we recognize as...'"
+    },
+    "structural_signposting": {
+      "transition_phrases": [
+        "But what makes [subject] truly fascinating isn't just X. It's Y.",
+        "To understand Z, we need to go back to...",
+        "This brings us to...",
+        "Beyond X, there's...",
+        "And this is just the beginning of..."
+      ],
+      "section_introductions": "Frames what's coming as answering a question raised earlier",
+      "conceptual_bridges": "Explicitly connects new information to previous revelations"
+    },
+    "mystery_mechanics": {
+      "question_seeding": "Plants questions before answering them",
+      "revelation_timing": "Builds anticipation through partial information before complete picture",
+      "paradox_presentation": "Introduces seemingly contradictory facts that demand explanation",
+      "solution_satisfaction": "Answers are more fascinating than questions suggested"
+    },
+    "comparison_and_analogy": {
+      "familiar_anchors": "Uses everyday objects, common technology, human experience",
+      "scale_comparisons": "Consistently contextualizes size, strength, age against known references",
+      "cross_domain_connections": "Links biology to engineering, physics to behavior, individual to universal",
+      "negative_comparisons": "Frequently uses 'This isn't X, it's actually Y' structure"
+    },
+    "scientific_storytelling": {
+      "evolutionary_framing": "Presents adaptations as problem-solving across time",
+      "mechanism_revelation": "Shows how things work before discussing why it matters",
+      "wonder_preservation": "Maintains awe even while explaining",
+      "uncertainty_honesty": "Acknowledges open questions and competing hypotheses",
+      "implication_exploration": "Connects biological facts to broader philosophical questions"
+    },
+    "language_characteristics": {
+      "vocabulary_level": "Sophisticated but accessible",
+      "jargon_approach": "Technical terms used accurately but defined through context",
+      "metaphor_style": "Grounded in physical reality rather than abstract",
+      "intensity_modulation": "Strategic use of intensifiers ('absolutely', 'genuinely', 'extraordinary')",
+      "casualness_markers": "Conversational interjections ('Like,', 'Yep,', 'Well,')"
+    },
+    "cinematic_qualities": {
+      "visual_language": "Describes scenarios with spatial and temporal specificity",
+      "scene_setting": "Creates mental images through concrete details",
+      "zoom_technique": "Shifts between macro view and microscopic detail",
+      "montage_rhythm": "Lists of examples create accumulating impact"
+    },
+    "philosophical_elevation": {
+      "when_deployed": "Final act of script",
+      "technique": "Zooms out from specific subject to universal implications",
+      "question_raising": "Challenges assumptions about intelligence, evolution, consciousness, existence",
+      "humility_message": "Suggests human understanding is limited by human perspective",
+      "open_ending": "Leaves viewer contemplating larger questions"
+    },
+    "credibility_building": {
+      "research_transparency": "References studies without over-citing",
+      "nuance_preservation": "Presents scientific debate where it exists",
+      "precision_language": "Careful qualifiers ('appears to', 'suggests', 'evidence indicates')",
+      "enthusiasm_balance": "Excitement tempered by intellectual honesty"
+    },
+    "viewer_transformation": {
+      "journey_arc": "From casual dismissal to profound respect",
+      "perception_shift": "Subject transforms from simple to extraordinary",
+      "takeaway_message": "Ordinary deserves deep investigation; complexity hides everywhere",
+      "lasting_effect": "Viewer unable to look at subject the same way again"
+    },
+    "closing_technique": {
+      "summary_avoidance": "Does not recap facts already presented",
+      "future_orientation": "Points toward ongoing research and unanswered questions",
+      "perspective_offer": "Provides new lens for viewing subject moving forward",
+      "connection_to_opening": "Callback that shows distance traveled from initial assumptions"
+    },
+    "authenticity_markers": {
+      "personal_voice": "Genuine surprise and curiosity, not performed enthusiasm",
+      "intellectual_honesty": "Admits complexity rather than oversimplifying",
+      "respect_for_subject": "Wonder without anthropomorphizing or sensationalizing",
+      "viewer_respect": "Trusts audience to handle complexity"
+    },
+    "structural_template": {
+      "section_1_hook": {
+        "purpose": "Challenge a common assumption about the subject, promise depth the viewer didn't expect",
+        "word_count_target": "80-120 words",
+        "ends_with": "A statement that reframes the subject from ordinary to extraordinary"
+      },
+      "section_2_intro": {
+        "purpose": "Establish evolutionary or historical context, set up the mystery of how this subject became what it is",
+        "word_count_target": "150-250 words",
+        "ends_with": "A transitional question or revelation that launches the deep-dive"
+      },
+      "sections_3_to_N_body_segments": {
+        "purpose": "Each segment explores one major system, adaptation, or capability. Escalate complexity and wonder with each new segment.",
+        "word_count_target": "200-400 words per segment",
+        "internal_structure": [
+          "Introduce the system or capability with a surprising fact",
+          "Explain the mechanism with analogies to familiar concepts",
+          "Include one counterintuitive or mind-blowing detail",
+          "Close with a bridge to the next segment"
+        ]
+      },
+      "final_section_outro": {
+        "purpose": "Zoom out to philosophical implications. Connect the specific subject to universal questions about intelligence, evolution, or existence.",
+        "word_count_target": "100-180 words",
+        "ends_with": "An open question or perspective shift that lingers with the viewer"
+      }
+    }
+  }
+}

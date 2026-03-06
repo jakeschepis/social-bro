@@ -93,6 +93,15 @@ export interface ChatCompletionOptions {
   }>;
   temperature?: number;
   max_tokens?: number;
+  top_p?: number;
+  top_k?: number;
+  frequency_penalty?: number;
+  presence_penalty?: number;
+  reasoning?: { effort: 'minimal' | 'low' | 'medium' | 'high' };
+  response_format?: {
+    type: 'json_schema';
+    json_schema: { name: string; strict: boolean; schema: Record<string, unknown> };
+  };
 }
 
 export interface ChatCompletionResponse {
@@ -118,8 +127,14 @@ export async function createChatCompletion({
   userId,
   model,
   messages,
-  temperature = 0.7,
+  temperature = 1.0,
   max_tokens,
+  top_p,
+  top_k,
+  frequency_penalty,
+  presence_penalty,
+  reasoning,
+  response_format,
 }: ChatCompletionOptions): Promise<ChatCompletionResponse> {
   const apiKey = await getOpenRouterApiKey(userId);
 
@@ -137,6 +152,12 @@ export async function createChatCompletion({
       messages,
       temperature,
       ...(max_tokens && { max_tokens }),
+      ...(top_p !== undefined && { top_p }),
+      ...(top_k !== undefined && { top_k }),
+      ...(frequency_penalty !== undefined && { frequency_penalty }),
+      ...(presence_penalty !== undefined && { presence_penalty }),
+      ...(reasoning && { reasoning }),
+      ...(response_format && { response_format }),
     }),
   });
 

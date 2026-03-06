@@ -1,6 +1,6 @@
 import { rapidApiFetch } from '../client';
 
-const YOUTUBE_TRANSCRIPT_HOST = 'youtube-transcript3.p.rapidapi.com';
+const YOUTUBE_TRANSCRIPTS_HOST = 'youtube-transcripts.p.rapidapi.com';
 
 export interface TranscriptOptions {
   userId: string;
@@ -14,45 +14,49 @@ export interface TranscriptResult {
   lang: string;
 }
 
-interface TranscriptApiResponse {
-  success: boolean;
-  transcript?: string;
+interface TranscriptsApiResponse {
+  lang?: string;
+  availableLangs?: string[];
+  content?: string;
   error?: string;
+  message?: string;
 }
 
 /**
- * Extract transcript from a YouTube video URL
+ * Extract transcript using the YouTube Transcripts API (fallback endpoint)
  */
 export async function getYouTubeTranscript({
   userId,
   videoUrl,
   lang = 'en',
 }: TranscriptOptions): Promise<TranscriptResult> {
-  // Extract video ID from URL for reference
   const videoId = extractVideoId(videoUrl);
 
-  const response = await rapidApiFetch<TranscriptApiResponse>(userId, {
-    host: YOUTUBE_TRANSCRIPT_HOST,
-    endpoint: '/api/transcript-with-url',
+  const response = await rapidApiFetch<TranscriptsApiResponse>(userId, {
+    host: YOUTUBE_TRANSCRIPTS_HOST,
+    endpoint: '/youtube/transcript',
     params: {
       url: videoUrl,
-      flat_text: 'true',
+      videoId,
+      chunkSize: '500',
+      text: 'true',
       lang,
     },
+    timeoutMs: 15000,
   });
 
-  if (!response.success || response.error) {
-    throw new Error(response.error || 'Failed to extract transcript');
+  if (response.error || response.message) {
+    throw new Error(response.error || response.message || 'Failed to extract transcript');
   }
 
-  if (!response.transcript) {
+  if (!response.content || typeof response.content !== 'string') {
     throw new Error('No transcript available for this video');
   }
 
   return {
-    transcript: response.transcript,
+    transcript: response.content,
     videoId,
-    lang,
+    lang: response.lang || lang,
   };
 }
 

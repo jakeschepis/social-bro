@@ -16,9 +16,14 @@ async function main() {
   // eslint-disable-next-line no-console
   console.info('Seeding database...');
 
-  // Create admin user
-  const adminEmail = 'admin@socialbro.com';
-  const adminPassword = 'admin123123';
+  // Create admin user (override defaults via ADMIN_EMAIL / ADMIN_SEED_PASSWORD env vars)
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@socialbro.com';
+  const adminPassword = process.env.ADMIN_SEED_PASSWORD;
+  if (!adminPassword) {
+    throw new Error(
+      'ADMIN_SEED_PASSWORD environment variable is required to seed the admin user',
+    );
+  }
 
   const existingAdmin = await prisma.user.findUnique({
     where: { email: adminEmail },

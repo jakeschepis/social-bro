@@ -401,7 +401,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const guideContent = activeGuide ? GUIDE_CONTENT[activeGuide] : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
       {/* Backdrop */}
       <div
         className={`absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-300 ${
@@ -423,7 +423,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         }`}
       >
         {/* Settings Modal */}
-        <div className="relative w-[calc(100vw-1.5rem)] sm:w-full max-w-4xl mx-3 sm:mx-0 rounded-xl sm:rounded-2xl border border-white/10 bg-black/90 p-4 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto transition-all duration-300 ease-out">
+        <div className="relative w-full sm:min-w-[42rem] max-w-[72rem] sm:min-h-[32rem] rounded-xl sm:rounded-2xl border border-white/10 bg-black/90 p-4 sm:p-8 shadow-2xl max-h-[92vh] overflow-y-auto transition-all duration-300 ease-out">
           {/* Header */}
           <div className="mb-4 sm:mb-6 flex items-center justify-between">
             <h2 className="text-base sm:text-lg font-medium text-white">Settings</h2>

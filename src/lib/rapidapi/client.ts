@@ -5,6 +5,7 @@ import { getCachedApiKey, setCachedApiKey } from '@/lib/cache';
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
+const DEFAULT_TIMEOUT_MS = 30000; // 30 second timeout for all RapidAPI calls
 
 // Retryable status codes (transient errors)
 const RETRYABLE_STATUS_CODES = [408, 429, 500, 502, 503, 504];
@@ -55,6 +56,7 @@ export interface RapidApiRequestOptions {
   params?: Record<string, string>;
   method?: 'GET' | 'POST';
   body?: Record<string, unknown>;
+  timeoutMs?: number;
 }
 
 export async function rapidApiFetch<T>(
@@ -62,7 +64,7 @@ export async function rapidApiFetch<T>(
   options: RapidApiRequestOptions
 ): Promise<T> {
   const apiKey = await getRapidApiKey(userId);
-  const { host, endpoint, params, method = 'GET', body } = options;
+  const { host, endpoint, params, method = 'GET', body, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
 
   const url = new URL(`https://${host}${endpoint}`);
   if (params) {
@@ -75,6 +77,9 @@ export async function rapidApiFetch<T>(
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
       const response = await fetch(url.toString(), {
         method,
         headers: {
@@ -83,7 +88,8 @@ export async function rapidApiFetch<T>(
           ...(body && { 'Content-Type': 'application/json' }),
         },
         ...(body && { body: JSON.stringify(body) }),
-      });
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeout));
 
       if (!response.ok) {
         const errorText = await response.text();

@@ -249,6 +249,7 @@ model Script {
   notes             String?         @db.Text
   status            String          @default("draft") // draft, in_progress, completed
   sourceUrl         String?         // Original video URL if extracted from a video
+  scriptType        String          @default("single-subject")
   repurposeVideoId  String?         // Link to the repurpose video if applicable
   repurposeVideo    RepurposeVideo? @relation(fields: [repurposeVideoId], references: [id], onDelete: SetNull)
   createdAt         DateTime        @default(now())

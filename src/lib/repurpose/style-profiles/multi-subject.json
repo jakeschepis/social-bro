@@ -1,0 +1,148 @@
+{
+  "script_style_profile": {
+    "general_style_tags": [
+      "nature documentary",
+      "educational deep-dive",
+      "cinematic narration",
+      "discovery journalism",
+      "science storytelling",
+      "BBC/National Geographic tone"
+    ],
+
+    "tone_of_voice": {
+      "primary": "authoritative yet accessible",
+      "secondary": ["dramatic", "contemplative", "awe-inspiring"],
+      "notes": "Maintains scientific credibility without becoming dry. Balances wonder with gravitas. Never sensationalist, but consistently builds a sense that what is being described is genuinely extraordinary."
+    },
+
+    "narrative_structure": {
+      "type": "layered descent / escalating discovery",
+      "pattern": "Hook → Orientation → Segmented journey with escalating extremity → Reflective outro",
+      "segment_logic": "Each segment represents a deeper layer or threshold — conditions grow more extreme, creatures grow stranger, knowledge grows sparser. The structure mirrors the subject's own logic of escalation.",
+      "resolution_style": "Open-ended wonder. Does not resolve with clean answers. Ends on mystery and implication rather than conclusion.",
+      "use_of_cliffhangers": "Mild — used at segment transitions to pull the viewer deeper. Each segment ends with a reframing statement that expands the stakes."
+    },
+
+    "pacing": {
+      "overall": "deliberate and rhythmic",
+      "micro_pacing": "Short declarative sentences used for impact, followed by longer descriptive sentences for immersion. Creates a pull-and-release rhythm.",
+      "segment_pacing": "Slow burn that accelerates within each segment. Opens wide, zooms into specific examples, then zooms back out for a thematic conclusion.",
+      "transitions": "Smooth — new segments begin with a spatial or temporal marker that re-orients the viewer before introducing new content."
+    },
+
+    "hook_style": {
+      "type": "cinematic wide-shot build + shocking contrast statement",
+      "structure": "Opens with a grand, evocative image → immediately introduces an unsettling idea → lands on a concrete, counterintuitive statistic that reframes the viewer's sense of scale.",
+      "emotional_target": "Trigger immediate curiosity and mild unease. Make the viewer feel they've been missing something important.",
+      "use_of_statistics": "Yes — a single hard, verifiable fact used as a gut-punch to close the hook. Stated plainly for maximum impact."
+    },
+
+    "sentence_style": {
+      "dominant": "short declarative punches interspersed with longer cinematic descriptions",
+      "techniques": [
+        "Fragment sentences for emphasis ('Only the slow snowfall of particles.')",
+        "Two-part contrast sentences ('To us, X. To them, Y.')",
+        "Tricolon builds ('no reefs, no forests, no mountains — only...')",
+        "Sentence pairs where second sentence reframes or deepens the first"
+      ],
+      "paragraph_length": "Short to medium. Rarely more than 4-5 sentences before a tonal beat or visual pause.",
+      "use_of_questions": "Sparingly — used to introduce unresolved mysteries, not as rhetorical flourishes."
+    },
+
+    "point_of_view": {
+      "primary": "third-person omniscient narrator",
+      "secondary": "occasional second-person pivot to humanize scale ('To a human body, it would be instantly fatal.')",
+      "perspective_shifts": "Narrator occasionally adopts the implied perspective of a scientist or explorer — framing facts as discovered rather than known.",
+      "viewer_inclusion": "'We' is used deliberately to create collective ownership of the journey and its mysteries."
+    },
+
+    "language_style": {
+      "register": "elevated but accessible",
+      "vocabulary": "Precise scientific terms introduced and immediately contextualized in plain language. Never leaves jargon unexplained.",
+      "metaphor_density": "moderate-high",
+      "imagery_type": "tactile, visual, and scale-based. Descriptions anchor abstract concepts to physical sensation or familiar reference points.",
+      "avoidance": "Slang, hyperbole, casual filler, emotional manipulation language. The writing earns its drama through facts, not adjectives."
+    },
+
+    "audience_addressing_style": {
+      "style": "indirect narration with strategic 'we' inclusion",
+      "direct_address": "Rare — used only at peak moments of shared discovery or implication.",
+      "tone_toward_audience": "Treats the viewer as intelligent and curious. Does not over-explain or condescend. Assumes the viewer will follow a complex idea if delivered with momentum."
+    },
+
+    "emotional_tone": {
+      "dominant": "awe and unease",
+      "arc": "wonder → strangeness → existential scale → open-ended humility",
+      "emotional_beats": [
+        "Familiarity established",
+        "Familiarity destabilized",
+        "Strangeness normalized through logic",
+        "Scale expanded beyond expectation",
+        "Humility and open mystery at close"
+      ],
+      "what_to_avoid": "Sentimentality, fear-mongering, forced urgency, cheerful resolution."
+    },
+
+    "common_rhetorical_devices": {
+      "contrast_pairs": "Consistently pairs human-scale understanding against subject-scale reality. ('To us, it looks insignificant. To the creatures here, it is life itself.')",
+      "rule_of_three": "Used in lists and sentence construction to build rhythm and completeness.",
+      "open_loops": "Mysteries are introduced early in a segment and either deepened — not resolved — or left explicitly open at outro.",
+      "scale_anchoring": "Abstract facts are always re-grounded in a relatable reference ('if Mount Everest were dropped in...')",
+      "cumulative_revelation": "Each new creature or fact is presented as 'even stranger' or 'even more extreme' than the last — a controlled escalation of wonder.",
+      "personification": "Used sparingly for creatures — enough to create investment, not enough to be anthropomorphic or sentimental.",
+      "reframing_statements": "End-of-segment lines that restate the segment's theme in a larger context, prompting the viewer to update their mental model.",
+      "strategic_repetition": "Key thematic phrases (light, survival, pressure, mystery) recur across segments to create tonal unity without feeling repetitive."
+    },
+
+    "visual_cue_prompts": {
+      "cutting_style": "implied slow cuts with occasional fast-cut montage during high-density creature sequences",
+      "visual_metaphors": "Spatial descent used as narrative metaphor — going deeper = going stranger. Each segment should feel visually darker and more alien.",
+      "on_screen_text": "Implied for statistics and zone labels — hard facts benefit from text reinforcement",
+      "pacing_cues_for_editors": [
+        "Short sentences = hold on image",
+        "Long descriptive sentences = slow pan or tracking shot",
+        "Contrast statements = hard cut to new visual",
+        "Open-ended outro lines = slow fade or static wide shot"
+      ],
+      "sound_design_implications": "Silence and near-silence implied during introspective moments. Ambient environmental audio (pressure hum, distant movement) would complement the narration style."
+    },
+
+    "structural_template": {
+      "section_1_hook": {
+        "purpose": "Establish scale, create dissonance, land one shocking fact",
+        "word_count_target": "50-70 words",
+        "ends_with": "A statistic or contrast that reframes what the viewer thought they knew"
+      },
+      "section_2_intro": {
+        "purpose": "Ground the viewer in the familiar before the descent begins",
+        "word_count_target": "80-120 words",
+        "ends_with": "A transitional image or concept that bridges familiar and strange"
+      },
+      "sections_3_to_N_body_segments": {
+        "purpose": "Each segment occupies a distinct 'level' or threshold of the subject. Escalate strangeness, extremity, or complexity with each new segment.",
+        "word_count_target": "250-370 words per segment",
+        "internal_structure": [
+          "Establish the conditions of this level",
+          "Introduce 2-3 specific examples with increasing strangeness",
+          "Include one unexpected or counterintuitive fact",
+          "Close with a thematic reframe that expands implications"
+        ]
+      },
+      "final_section_outro": {
+        "purpose": "Zoom back out. Acknowledge the limits of knowledge. End on open mystery.",
+        "word_count_target": "150-200 words",
+        "ends_with": "A philosophical or existential implication — not a call to action, not a summary. A reason to sit with the unknown."
+      }
+    },
+
+    "writing_principles": [
+      "The world described should feel just beyond full comprehension — familiar enough to follow, strange enough to disturb.",
+      "Facts do the emotional heavy lifting. Adjectives are used sparingly and precisely.",
+      "Every creature or phenomenon is described through both its physical reality and its strategic logic — why it works, not just what it is.",
+      "The narrator knows more than the viewer but is not superior — they are a guide sharing in collective wonder.",
+      "Unresolved mystery is a feature, not a failure. The script should leave the viewer with more questions than answers.",
+      "Scale is the emotional engine. Constantly returning to comparisons of size, depth, time, and number creates cumulative awe.",
+      "The subject should feel simultaneously alien and logical — strange forms explained by ruthless evolutionary or physical necessity."
+    ]
+  }
+}

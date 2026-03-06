@@ -4,6 +4,7 @@ import { getYouTubeTranscriptFast } from '@/lib/rapidapi';
 import { requireValidUser } from '@/lib/auth-utils';
 import { isApiError } from '@/lib/errors';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { validateScriptType } from '@/lib/repurpose';
 
 // POST - Extract transcript from a repurpose video and save as script
 export async function POST(request: NextRequest) {
@@ -25,10 +26,16 @@ export async function POST(request: NextRequest) {
     } catch {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
-    const { repurposeVideoId, lang = 'en' } = body as {
+    const {
+      repurposeVideoId,
+      lang = 'en',
+      scriptType: rawScriptType,
+    } = body as {
       repurposeVideoId: string;
       lang?: string;
+      scriptType?: string;
     };
+    const scriptType = validateScriptType(rawScriptType ?? 'single-subject');
 
     if (!repurposeVideoId) {
       return NextResponse.json({ error: 'repurposeVideoId is required' }, { status: 400 });
@@ -64,6 +71,7 @@ export async function POST(request: NextRequest) {
           title: existingScript.title,
           script: existingScript.script,
           status: existingScript.status,
+          scriptType: existingScript.scriptType,
           sourceUrl: existingScript.sourceUrl,
           createdAt: existingScript.createdAt.toISOString(),
           updatedAt: existingScript.updatedAt.toISOString(),
@@ -85,6 +93,7 @@ export async function POST(request: NextRequest) {
         userId,
         title: repurposeVideo.title,
         script: result.transcript,
+        scriptType,
         sourceUrl: repurposeVideo.url,
         repurposeVideoId: repurposeVideo.id,
         status: 'draft',
@@ -98,6 +107,7 @@ export async function POST(request: NextRequest) {
         title: script.title,
         script: script.script,
         status: script.status,
+        scriptType: script.scriptType,
         sourceUrl: script.sourceUrl,
         createdAt: script.createdAt.toISOString(),
         updatedAt: script.updatedAt.toISOString(),
