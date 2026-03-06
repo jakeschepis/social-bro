@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUserId } from '@/lib/auth-utils';
 import { prisma } from '@/lib/db';
-import { createChatCompletion } from '@/lib/openrouter';
-import {
-  buildHooksSystemPrompt,
-  buildHooksUserPrompt,
-  HOOKS_RESPONSE_FORMAT,
-} from '@/lib/repurpose/prompts';
 import { extractOriginalHook } from '@/lib/repurpose/chunker';
-import { validateScriptType } from '@/lib/repurpose';
+import { generateHooks, postProcessScript, validateScriptType } from '@/lib/repurpose';
 import { isApiError } from '@/lib/errors';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
@@ -63,39 +57,30 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
       ? extractOriginalHook(script.repurposedScript)
       : extractOriginalHook(script.script);
 
-    // Generate new hooks using style-aware prompts
-    const response = await createChatCompletion({
+    // Extract subject from script title for explicit grounding
+    const subject = script.title || undefined;
+
+    // Generate hooks via service layer (includes JSON parsing + fallback)
+    const hooks = await generateHooks(
       userId,
-      model: settings.selectedModelId,
-      messages: [
-        { role: 'system', content: buildHooksSystemPrompt(scriptType) },
-        { role: 'user', content: buildHooksUserPrompt(originalHook, scriptType) },
-      ],
-      response_format: HOOKS_RESPONSE_FORMAT,
-    });
+      settings.selectedModelId,
+      originalHook,
+      scriptType,
+      subject
+    );
 
-    const content = response.choices[0]?.message?.content || '{"hooks":[]}';
-
-    let hooks: string[] = [];
-    try {
-      const parsed = JSON.parse(content);
-      if (Array.isArray(parsed.hooks)) {
-        hooks = parsed.hooks.slice(0, 3);
-      }
-    } catch {
-      const lines = content.split('\n').filter((line) => line.trim().length > 10);
-      hooks = lines.slice(0, 3).map((line) => line.replace(/^[\d.\-*]+\s*/, '').trim());
-    }
+    // Post-process: fix contractions and em dashes
+    const processedHooks = hooks.map(postProcessScript);
 
     // Update the script with new hooks
     await prisma.script.update({
       where: { id },
-      data: { hooks },
+      data: { hooks: processedHooks },
     });
 
     return NextResponse.json({
       success: true,
-      hooks,
+      hooks: processedHooks,
     });
   } catch (error) {
     if (error instanceof Error) {

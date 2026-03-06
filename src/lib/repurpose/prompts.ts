@@ -38,6 +38,17 @@ function trimProfileForPrompt(profile: ReturnType<typeof getStyleProfile>): stri
 }
 
 // ---------------------------------------------------------------------------
+// Shared voice rules — used by both repurpose and hooks prompts
+// ---------------------------------------------------------------------------
+
+const SHARED_VOICE_RULES = `- First person throughout. Transform any "we" or third-person narration into "I".
+- Signature phrases every 200-300 words: "Here's what surprised me...", "But here's the thing...", "And here's where it gets [adjective]...", "What I didn't expect...", "The deeper I went...", "It turns out..."
+- Rotate through ALL signature phrases. No single phrase more than twice per script.
+- Casual markers: "Like,", "Yep,", "Well,", "I mean,", "Honestly,"
+- Sentence rhythm: short punchy fragments ("That changed everything.") between longer explanations.
+- Use contractions naturally ("it's", "didn't", "that's"). This is spoken script, not an essay.`;
+
+// ---------------------------------------------------------------------------
 // Few-shot examples sourced from reference scripts
 // ---------------------------------------------------------------------------
 
@@ -50,12 +61,20 @@ Spiders are found on every continent except Antarctica. They are one of the most
 A spider always looked simple to me. Eight legs, tiny body, builds a web. Nothing special. I never gave them a second thought. But once I actually started digging into how a spider works, everything changed. I didn't expect to find a creature this overengineered, this efficient, and this bizarre. Like, there are species that can literally fly, drifting through the air on strands of silk like tiny parachutes. The deeper I went, the more shocked I became at how much I never knew.
 </output>
 </example>
-<example description="Body section: transform formal third-person into conversational first-person with contractions">
+<example description="Body section: transform formal third-person into conversational first-person with contractions and casual markers">
 <input>
 The octopus nervous system follows an entirely different blueprint from vertebrates. An octopus possesses hundreds of millions of neurons comparable to a dog. But roughly two thirds of them exist outside the brain. It is distributed throughout the eight arms organized into clusters called ganglia. Each arm contains a localized processing center. It is capable of executing complex behaviors independently. That is unlike anything in the vertebrate world.
 </input>
 <output>
-Here's what I didn't expect. An octopus has hundreds of millions of neurons, about as many as a dog. But two thirds of them aren't in its brain. They're spread across its eight arms. Each arm has its own processing center, its own local intelligence. Researchers have shown that a severed arm will keep exploring on its own, recoiling from things it doesn't like, reaching toward things it does. No input from the brain at all. It's genuinely autonomous. That's not delegation. That's a fundamentally different model of what a mind can be.
+Here's what I didn't expect. An octopus has hundreds of millions of neurons, about as many as a dog. But two thirds of them aren't in its brain. They're spread across its eight arms. I mean, each arm has its own processing center, its own local intelligence. Like, researchers have shown that a severed arm will keep exploring on its own, recoiling from things it doesn't like, reaching toward things it does. No input from the brain at all. It's genuinely autonomous. Honestly, that's not delegation. That's a fundamentally different model of what a mind can be.
+</output>
+</example>
+<example description="Context-setting: transform a textbook background passage into first-person discovery framing">
+<input>
+The social intelligence hypothesis is widely accepted in cognitive science. It proposes that complex social environments drive the evolution of larger brains. Primates, dolphins, and wolves all live in large social groups with intricate dominance hierarchies. They must track alliances, rivalries, and social debts. This constant social computation requires significant neural resources.
+</input>
+<output>
+When I first looked into this, every source pointed me toward the same idea. It's called the social intelligence hypothesis. Basically, the theory says that living in complex social groups is what forces brains to get bigger. Yep, chimps, dolphins, wolves. They all live in these massive political webs, constantly tracking who's allied with who, who owes what. And honestly, it makes sense on paper. I kept reading about how all that social math supposedly demands serious brain power. But here's where it gets interesting. That theory doesn't explain what I was looking at.
 </output>
 </example>
 <example description="Closing: transform a sponsor plug into philosophical elevation">
@@ -63,7 +82,7 @@ Here's what I didn't expect. An octopus has hundreds of millions of neurons, abo
 I love exploring these topics because nature never stops surprising me. The natural world is full of mysteries waiting to be uncovered. If you want to learn more about science check out brilliant. Brilliant is an amazing interactive platform for learning.
 </input>
 <output>
-When I started this, I thought I was learning about one animal. But what I actually found was something bigger. A creature that arrived at intelligence through an entirely different blueprint than ours, built from scratch on a separate branch of the evolutionary tree. And yet it reached the same destination. That raises a question I can't stop thinking about. If intelligence can emerge this independently, from architectures this different, then maybe what we call "smart" isn't one thing at all. Maybe it's just what happens when the world gets complicated enough to demand it.
+Honestly, when I started this, I thought I was learning about one animal. But what I actually found was something bigger. A creature that arrived at intelligence through an entirely different blueprint than ours, built from scratch on a separate branch of the evolutionary tree. And yet it reached the same destination. Well, that raises a question I can't stop thinking about. If intelligence can emerge this independently, from architectures this different, then maybe what we call "smart" isn't one thing at all. Maybe it's just what happens when the world gets complicated enough to demand it.
 </output>
 </example>
 </examples>`;
@@ -96,15 +115,12 @@ export function buildRepurposeSystemPrompt(scriptType: ScriptType): string {
   const examples =
     scriptType === 'single-subject' ? SINGLE_SUBJECT_EXAMPLES : MULTI_SUBJECT_EXAMPLES;
 
-  return `You are a scriptwriter who transforms transcripts into first-person discovery narratives. You write as a curious investigator sharing your research journey — "I discovered", "What surprised me", "The deeper I went."
+  return `You are a scriptwriter who transforms transcripts into first-person discovery narratives. You write as a curious investigator sharing your research journey: "I discovered", "What surprised me", "The deeper I went."
 
 <voice>
-- First person throughout. Transform any "we" or third-person narration into "I".
-- Hook: YOUR dismissive assumption about THIS specific subject, shattered by a surprising fact. Never open with a broad topic survey.
-- Signature phrases every 200-300 words: "Here's what surprised me...", "But here's the thing...", "And here's where it gets [adjective]...", "What I didn't expect...", "The deeper I went...", "It turns out..."
-- Casual markers: "Like,", "Yep,", "Well,", "I mean,", "Honestly,"
-- Sentence rhythm: short punchy fragments ("That changed everything.") between longer explanations.
-- Emotional escalation: curiosity early → astonishment middle → philosophical wonder at the end.
+${SHARED_VOICE_RULES}
+- Hook: Name the subject in your FIRST sentence. YOUR dismissive assumption about THIS specific subject, shattered by a surprising fact. Never open with other animals or a broad topic survey.
+- Emotional escalation: curiosity early, astonishment middle, philosophical wonder at the end.
 - Closing: philosophical elevation connecting the subject to universal questions. Callback to opening assumption. Never recap. Replace any sponsor/ad sections.
 </voice>
 
@@ -115,10 +131,9 @@ ${trimProfileForPrompt(profile)}
 ${examples}
 
 <constraints>
-- Write at least 2000 words. Be comprehensive and detailed — this is a full documentary script, not a summary.
+- Be comprehensive and detailed. This is a full documentary script, not a summary.
 - Keep ALL names, species names, and specific references exactly as they appear.
 - Never use em dashes (\u2014), semicolons (;), or AI phrases like "dive into", "unleash", "game-changer", "revolutionary", "cutting-edge", "elevate", "embark on", "delve into".
-- Use contractions naturally ("it's", "didn't", "that's"). This is spoken script, not an essay.
 - Return ONLY the repurposed script text.
 </constraints>`;
 }
@@ -126,8 +141,8 @@ ${examples}
 export function buildAnalysisPrompt(transcript: string, scriptType: ScriptType): string {
   const typeGuidance =
     scriptType === 'single-subject'
-      ? 'This is a single-subject deep-dive script. Expect sections that progressively explore one topic in depth — a hook that introduces the subject, an intro that sets up the investigation, body sections that each reveal a new facet or layer of the same subject, and an outro that synthesizes the findings.'
-      : 'This is a multi-subject thematic script. Expect sections that cover multiple distinct subjects or creatures united by a common theme — a hook that introduces the overarching theme, body sections that each focus on a different subject or example, and an outro that ties the subjects together.';
+      ? 'This is a single-subject deep-dive script. Expect sections that progressively explore one topic in depth: a hook that introduces the subject, an intro that sets up the investigation, body sections that each reveal a new facet or layer of the same subject, and an outro that synthesizes the findings.'
+      : 'This is a multi-subject thematic script. Expect sections that cover multiple distinct subjects or creatures united by a common theme: a hook that introduces the overarching theme, body sections that each focus on a different subject or example, and an outro that ties the subjects together.';
 
   return `<transcript>
 ${transcript}
@@ -229,7 +244,7 @@ This transcript is about "${subjectHint}". Repurpose it into a first-person disc
 
 Plant open loops: raise a question early that you answer 2-3 sections later.
 
-Write approximately ${targetWordCount} words total. Match each section's word count from the section map. Do NOT compress or shorten — every section must be fully developed.`;
+Write approximately ${targetWordCount} words total. Match each section's word count from the section map. Do NOT compress or shorten. Every section must be fully developed.`;
 }
 
 function getSectionVoiceGuidance(
@@ -346,11 +361,9 @@ ${hookStyle}
 </hook_style>
 
 <voice>
-- First person only: "I always assumed...", "I never gave them a second thought...", "What I found..."
+${SHARED_VOICE_RULES}
 - Assumption demolition: YOUR dismissive assumption about the specific subject, shattered by a surprising fact.
-- Signature phrases: "Here's what surprised me...", "But here's the thing...", "The deeper I went..."
-- Casual markers: "Like,", "Yep,", "Well,"
-- Sentence rhythm: short punchy fragments between longer flowing sentences.
+- Use 1-2 signature phrases per hook, not more. Let the surprising facts carry the weight.
 - Never use second-person lecture ("You have likely been taught..."), aggressive closers, or trailer voiceover tone.
 </voice>
 
@@ -364,19 +377,25 @@ ${examples}
 </constraints>`;
 }
 
-export function buildHooksUserPrompt(originalHook: string, scriptType: ScriptType): string {
+export function buildHooksUserPrompt(
+  originalHook: string,
+  scriptType: ScriptType,
+  subject?: string
+): string {
   const profile = getStyleProfile(scriptType);
   const hookWordTarget =
     profile.script_style_profile.structural_template.section_1_hook.word_count_target;
 
+  const subjectLine = subject ? `\nSUBJECT: ${subject}\n` : '';
+
   return `<original_hook>
 ${originalHook}
 </original_hook>
-
-Create 3 alternative hook sections (${hookWordTarget} each) that could replace this opening. The hooks must be about the SAME subject as the original — do not introduce different animals or topics.
+${subjectLine}
+Create 3 alternative hook sections (${hookWordTarget} each) that could replace this opening. The hooks must be about ${subject || 'the SAME subject as the original'}. Do not introduce different animals or topics.
 
 Each hook MUST:
-- Be written in FIRST PERSON — "I" not "you". You are sharing YOUR assumption being shattered.
+- Be written in FIRST PERSON: "I" not "you". You are sharing YOUR assumption being shattered.
 - Open with your personal dismissive assumption about the SPECIFIC subject in the original hook (not the broader category)
 - Shatter that assumption with a surprising fact about THAT SAME subject
 - Use contractions naturally ("It's", "I've", "didn't")
@@ -395,6 +414,8 @@ export const HOOKS_RESPONSE_FORMAT = {
         hooks: {
           type: 'array',
           items: { type: 'string' },
+          minItems: 3,
+          maxItems: 3,
         },
       },
       required: ['hooks'],

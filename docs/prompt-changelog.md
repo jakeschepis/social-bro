@@ -4,6 +4,139 @@ Tracking what works, what doesn't, and what changes are made to the repurpose pr
 
 ---
 
+## 2026-03-06 — v4.3 Changes (phrase variety + hook subject grounding + subject-first rule + closing markers)
+
+### Problems
+
+Script review of crow intelligence v4.2 output identified 4 issues:
+
+1. "It turns out" used 7x in ~2,400 words — severely overused, creates predictable cadence
+2. Alternate hooks (all 3) were about orcas/primates, not crows — subject grounding missing from hooks prompt
+3. Main script hook buries crows in sentence 5 behind chimpanzees, orcas, and dogs
+4. Casualness markers at 1.7/1,000 words (target: 3+) — still below target despite v4.2 fixes
+
+### Root Cause Analysis
+
+1. **No cap on individual phrase reuse.** Voice rules set density (every 200-300 words) but never constrained variety. Model defaults to the most versatile phrase.
+2. **Hooks user prompt lacks explicit subject.** `buildHooksUserPrompt()` says "about the SAME subject" but doesn't state what the subject IS. When `originalHook` mentions multiple animals, model can't determine the primary subject. v3.2 fixed this for the repurpose prompt but not the hooks prompt.
+3. **"Never open with a broad topic survey" is ambiguous.** Model interprets listing other animals as personal context, not a survey. No rule says "name the subject in sentence 1."
+4. **Closing example (Example 4) had zero casual markers.** Per Gemini 3, later examples carry more weight. The last example the model sees before generating was marker-free.
+
+### Changes Made (v4.3)
+
+| File | Change |
+|------|--------|
+| `prompts.ts` — `SHARED_VOICE_RULES` | Added: "Rotate through ALL signature phrases. No single phrase more than twice per script." |
+| `prompts.ts` — hook voice rule | Changed to: "Name the subject in your FIRST sentence. YOUR dismissive assumption about THIS specific subject... Never open with other animals or a broad topic survey." |
+| `prompts.ts` — Example 3 (context-setting) | Added "Yep," before chimps/dolphins/wolves list; moved "And honestly," for natural flow |
+| `prompts.ts` — Example 4 (closing) | Added "Honestly," at start and "Well," before the philosophical question |
+| `prompts.ts` — `buildHooksUserPrompt()` | Added optional `subject` parameter; adds `SUBJECT: ${subject}` line and uses subject in task instruction |
+| `service.ts` — `generateHooks()` | Added optional `subject` parameter, passed through to `buildHooksUserPrompt()` |
+| `service.ts` — `repurposeTranscript()` | Extracts subject from section titles (same as repurpose prompt) and passes to `generateHooks()` |
+
+### Gemini 3 Principles Applied
+
+1. **Direct instructions** — phrase rotation cap is concise and unambiguous
+2. **State everything explicitly** — hooks prompt now receives the subject name, not inferred from context
+3. **Examples carry the weight** — casual markers added to Examples 3 and 4 so ALL examples model the desired output
+4. **Consistent formatting across examples** — every example now contains at least 1 casual marker
+
+### Metrics to Verify
+
+1. "It turns out" ≤ 2x per script; at least 4 of 6 signature phrases used
+2. All 3 generated hooks mention the correct subject (not other animals)
+3. Subject appears in sentence 1 of script hook
+4. Casualness markers ≥ 2.5 per 1,000 words
+
+---
+
+## 2026-03-06 — v4.2 Changes (casualness markers + lecture mode + hook density)
+
+### Problems
+
+Script review of crow intelligence v4 output identified 3 systemic prompt issues:
+
+1. Casualness markers ("Like,", "I mean,", "Honestly,") vanish in body sections (~1 per 1500 words vs 3+ target)
+2. Context-setting passages drop into textbook lecture mode (5+ consecutive sentences with no "I" statement)
+3. Hooks cram 4-6 signature phrases into ~100 words, making them feel formulaic
+
+### Root Cause Analysis
+
+1. **Body few-shot example had zero casual markers.** Model mirrors example patterns — hooks examples had markers, body example didn't. Rules alone insufficient.
+2. **No example showing context/background transformation.** Existing examples transform subject narration, not theoretical framework passages. Model defaults to textbook voice for background material.
+3. **Density guidance ("every 200-300 words") doesn't scale for short sections.** Hooks are ~100 words. Model tries to hit density in a short span, over-applying.
+
+### Changes Made (v4.2)
+
+| File | Change |
+|------|--------|
+| `prompts.ts` — body example | Added 3 casual markers ("I mean,", "Like,", "Honestly,") to body section output |
+| `prompts.ts` — new example | Added 4th few-shot example: textbook context-setting → first-person discovery framing |
+| `prompts.ts` — hooks voice block | Added "Use 1-2 signature phrases per hook, not more. Let the surprising facts carry the weight." |
+
+### Gemini 3 Principles Applied
+
+1. **Examples carry the weight** — casual markers in body example will be mirrored; rules alone failed to produce them
+2. **2-5 few-shot examples recommended** — added 4th example targeting a specific gap (context-setting passages)
+3. **Direct instructions** — explicit cap on hook signature phrases prevents over-application of density guidance
+
+### Metrics to Verify
+
+1. Casualness marker density in body sections ≥ 3 per 1000 words
+2. Zero passages of 5+ consecutive sentences without an "I" statement
+3. Hooks contain 1-2 signature phrases each, not 4-6
+
+---
+
+## 2026-03-06 — v4.1 Changes (consistency fixes + voice alignment)
+
+### Problems
+
+Prompt review identified 7 issues across prompts, style profiles, and service code:
+
+1. Multi-subject style profile defined "third-person omniscient narrator" but system prompt forces first-person, creating conflicting constraints
+2. Word count stated twice (hardcoded 2000 in system constraints + dynamic `targetWordCount` in user prompt)
+3. Hooks JSON schema had no `minItems`/`maxItems`, relying on `.slice(0, 3)` instead of schema enforcement
+4. Fallback repurposing path missing `reasoning: { effort: 'high' }` (only single-pass and chunked had it)
+5. Em dashes present in style profile JSON and prompt text despite being a forbidden character
+6. Voice rules duplicated between repurpose and hooks system prompts (drift risk)
+7. `extractOriginalHook` fallback captured only ~100 words, shorter than hook examples
+
+### Changes Made (v4.1)
+
+| File | Change |
+|------|--------|
+| `style-profiles/multi-subject.json` | Updated `point_of_view` from "third-person omniscient narrator" to "First-person experiential journey" |
+| `style-profiles/multi-subject.json` | Updated `audience_addressing_style` from "indirect narration" to "first-person narration sharing personal research journey" |
+| `style-profiles/multi-subject.json` | Updated `language_style.register` from "elevated but accessible" to "conversational yet authoritative", added `casualness_markers`, removed "Slang, casual filler" from avoidance |
+| `style-profiles/multi-subject.json` | Replaced all em dashes with hyphens throughout |
+| `style-profiles/single-subject.json` | Fixed em dash in sentence_style example ("Setup, setup, setup, payoff.") |
+| `prompts.ts` | Extracted `SHARED_VOICE_RULES` constant used by both repurpose and hooks system prompts |
+| `prompts.ts` | Removed hardcoded "Write at least 2000 words" from system `<constraints>` (user prompt has dynamic word count) |
+| `prompts.ts` | Added `minItems: 3, maxItems: 3` to `HOOKS_RESPONSE_FORMAT` schema |
+| `prompts.ts` | Replaced all em dashes in prompt text with colons, commas, or periods |
+| `service.ts` | Added `reasoning: { effort: 'high' }` to `repurposeFallback` path |
+| `chunker.ts` | Increased `extractOriginalHook` from ~100 words to ~150-200 words to match hook example lengths |
+
+### Gemini 3 Principles Applied
+
+1. **No conflicting constraints** - Style profile and voice rules now agree on first-person voice
+2. **Single source of truth** - Word count only in user prompt (end position per Gemini 3 guidance)
+3. **Structured output enforcement** - Schema-level `minItems`/`maxItems` instead of code-level slicing
+4. **Consistent reasoning effort** - All repurposing paths use `high` reasoning for voice transformation
+5. **No em dashes in prompt input** - Model can't mirror forbidden characters from its own instructions
+6. **DRY voice rules** - Single `SHARED_VOICE_RULES` constant prevents drift between prompts
+
+### Metrics to Verify
+
+1. Multi-subject output uses first-person voice consistently (no third-person regression)
+2. Hooks response always contains exactly 3 items (schema enforcement)
+3. Fallback path produces same quality as single-pass (reasoning effort parity)
+4. Zero em dashes in any LLM output (none in prompts + post-processing catches stragglers)
+5. No conflicting style instructions visible when debugging prompts
+
+---
+
 ## 2026-03-05 — v3.1 Changes (hooks prompt + contractions + casualness)
 
 ### Problem

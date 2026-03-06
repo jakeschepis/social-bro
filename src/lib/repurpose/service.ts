@@ -88,7 +88,7 @@ const AUXILIARY_HAVE_REPLACEMENTS: [RegExp, string][] = [
   [/\bwho has (?!to\b|a\b|an\b|the\b|no\b|some\b|any\b|this\b|that\b)/gi, "who's "],
 ];
 
-function postProcessScript(text: string): string {
+export function postProcessScript(text: string): string {
   let result = text;
 
   // Replace em dashes with commas
@@ -165,18 +165,19 @@ async function getUserModel(userId: string): Promise<string> {
 /**
  * Generate 3 hook sections from the original opening
  */
-async function generateHooks(
+export async function generateHooks(
   userId: string,
   model: string,
   originalHook: string,
-  scriptType: ScriptType
+  scriptType: ScriptType,
+  subject?: string
 ): Promise<string[]> {
   const response = await createChatCompletion({
     userId,
     model,
     messages: [
       { role: 'system', content: buildHooksSystemPrompt(scriptType) },
-      { role: 'user', content: buildHooksUserPrompt(originalHook, scriptType) },
+      { role: 'user', content: buildHooksUserPrompt(originalHook, scriptType, subject) },
     ],
     response_format: HOOKS_RESPONSE_FORMAT,
   });
@@ -323,6 +324,7 @@ async function repurposeFallback(
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
+      reasoning: { effort: 'high' },
     });
 
     const result = response.choices[0]?.message?.content || '';
@@ -369,17 +371,22 @@ export async function repurposeTranscript(
     });
   }
 
-  // Extract hook for parallel generation
+  // Extract hook and subject for parallel generation
   let originalHook: string;
+  let subject: string | undefined;
   if (mappedSections && mappedSections.length > 0) {
     const hookSection = mappedSections.find((s) => s.type === 'hook');
     originalHook = hookSection?.content || extractOriginalHook(transcript);
+    subject = mappedSections
+      .map((s) => s.title)
+      .join(' ')
+      .slice(0, 200);
   } else {
     originalHook = extractOriginalHook(transcript);
   }
 
   // Start hooks generation in parallel (catch to prevent unhandled rejection)
-  const hooksPromise = generateHooks(userId, model, originalHook, scriptType).catch(
+  const hooksPromise = generateHooks(userId, model, originalHook, scriptType, subject).catch(
     (error: Error) => {
       console.error('Hooks generation failed:', error);
       return [] as string[];

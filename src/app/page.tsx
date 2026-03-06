@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Bookmark, BookmarkCheck, Loader2, Settings, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Bookmark, BookmarkCheck, Download, Loader2, Settings, RefreshCw, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   SearchInput,
@@ -28,6 +28,7 @@ import {
   searchInstagramWithDetails,
 } from '@/lib/api';
 import { ScriptTypeToggle } from '@/components/repurpose/ScriptTypeToggle';
+import { exportScriptAsMarkdown, downloadMarkdownFile, slugifyTitle } from '@/lib/export-script';
 import type {
   Platform,
   ScriptType,
@@ -689,6 +690,24 @@ export default function Home() {
                   <span className="inline-flex items-center rounded-full bg-purple-500/20 px-2.5 py-0.5 text-xs text-purple-400">
                     {hooks.length} hooks
                   </span>
+                )}
+                {viewingRepurposed && (
+                  <button
+                    onClick={() => {
+                      const markdown = exportScriptAsMarkdown({
+                        title: displayTitle,
+                        hooks,
+                        content: displayContent,
+                        scriptType: selectedScript.scriptType,
+                      });
+                      downloadMarkdownFile(markdown, slugifyTitle(displayTitle));
+                    }}
+                    className="ml-auto inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/70 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white active:scale-95"
+                    title="Download as Markdown"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Download
+                  </button>
                 )}
               </div>
             </div>

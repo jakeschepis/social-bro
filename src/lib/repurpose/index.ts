@@ -1,6 +1,8 @@
 export {
   repurposeTranscript,
   repurposeScriptById,
+  generateHooks,
+  postProcessScript,
   validateScriptType,
   type RepurposeResult,
   type ProgressStep,

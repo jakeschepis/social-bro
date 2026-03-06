@@ -130,16 +130,18 @@ export function extractOriginalHook(transcript: string): string {
     return transcript.slice(0, 200).trim();
   }
 
-  // Take up to 2 sentences or 100 words, whichever is less
-  let hook = sentences[0].trim();
-  if (sentences.length > 1 && countWords(hook) < 50) {
-    hook += ' ' + sentences[1].trim();
+  // Take sentences until we reach ~150 words (matching hook word count targets)
+  let hook = '';
+  for (const sentence of sentences) {
+    const candidate = hook ? hook + ' ' + sentence.trim() : sentence.trim();
+    if (countWords(candidate) > 150 && hook) break;
+    hook = candidate;
   }
 
-  // Limit to ~100 words
+  // Limit to ~200 words max
   const words = hook.split(/\s+/);
-  if (words.length > 100) {
-    hook = words.slice(0, 100).join(' ') + '...';
+  if (words.length > 200) {
+    hook = words.slice(0, 200).join(' ') + '...';
   }
 
   return hook;
